@@ -1,0 +1,22 @@
+name = "hyderabad-rent"
+main = "dist/worker.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "hyderabad-rent-prod"
+
+[vars]
+NODE_ENV = "production"
+
+# Kubernetes-style bindings will be set via wrangler secret put
+# SUPABASE_URL
+# SUPABASE_ANON_KEY
+# SUPABASE_SERVICE_ROLE_KEY
+# RESEND_API_KEY
+# RESEND_WEBHOOK_SECRET
+# TURNSTILE_SECRET_KEY
+# NEXT_PUBLIC_SUPABASE_URL
+# NEXT_PUBLIC_SUPABASE_ANON_KEY
+# NEXT_PUBLIC_TURNSTILE_SITE_KEY
+# NEXT_PUBLIC_MAP_TILE_URL

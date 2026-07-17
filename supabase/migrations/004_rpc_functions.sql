@@ -96,7 +96,7 @@ CREATE OR REPLACE FUNCTION get_listings_in_bbox(
     max_lon DOUBLE PRECISION,
     max_lat DOUBLE PRECISION,
     status_filter TEXT DEFAULT 'approved',
-    listing_type TEXT DEFAULT NULL
+    listing_type_filter TEXT DEFAULT NULL
 )
 RETURNS TABLE (
     id UUID,
@@ -127,10 +127,10 @@ BEGIN
           AND ST_X(geom::geometry) BETWEEN $2 AND $3
           AND ST_Y(geom::geometry) BETWEEN $4 AND $5
         LIMIT 200
-    $q$, CASE WHEN listing_type IS NOT NULL THEN 'AND listing_type = $6' ELSE '' END)
+    $q$, CASE WHEN listing_type_filter IS NOT NULL THEN 'AND listing_type = $6' ELSE '' END)
     USING
-        CASE WHEN listing_type IS NOT NULL THEN
-            ARRAY[status_filter, min_lon, max_lon, min_lat, max_lat, listing_type]
+        CASE WHEN listing_type_filter IS NOT NULL THEN
+            ARRAY[status_filter, min_lon, max_lon, min_lat, max_lat, listing_type_filter]
         ELSE
             ARRAY[status_filter, min_lon, max_lon, min_lat, max_lat]
         END;

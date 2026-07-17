@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { SeekerForm } from '@/components/forms/SeekerForm';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import type { SeekerSubmit } from '@/lib/schemas';
 
 export default function NewSeekerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: SeekerSubmit) => {
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/seekers', {

@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { ListingForm } from '@/components/forms/ListingForm';
 import { toast } from 'sonner';
+import type { ListingSubmit } from '@/lib/schemas';
+import Link from 'next/link';
 
 export default function NewListingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: ListingSubmit) => {
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/listings', {
@@ -57,6 +59,3 @@ export default function NewListingPage() {
     </div>
   );
 }
-
-// Add Link import
-import Link from 'next/link';

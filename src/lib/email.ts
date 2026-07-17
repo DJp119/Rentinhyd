@@ -320,6 +320,81 @@ export async function sendListingRentedEmail(
 }
 
 // ============================================
+// Daily Digest Email
+// ============================================
+
+export async function sendDailyDigestEmail(
+  email: string,
+  matches: Array<{
+    matchId: string;
+    listing: {
+      id: string;
+      listingType: string;
+      title: string;
+      description?: string;
+      bhk: string;
+      furnishing: string;
+      rent: number;
+      depositMonths: number;
+      maintenanceIncluded: boolean;
+      locality: string;
+      geom?: { type: string; coordinates: [number, number] };
+      availableFrom: string;
+      availableUntil?: string | null;
+      amenities: string[];
+      lifestylePrefs: Record<string, unknown>;
+      createdAt: string;
+      viewCount: number;
+    };
+    score: number;
+    scoreBreakdown: { geography: number; budget: number; bhk: number; timing: number; lifestyle: number };
+    seekerProfile: {
+      budgetRange: string;
+      bhk: string;
+      moveInWindow: string;
+      lifestyleTags: string[];
+    };
+  }>
+): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  const matchItemsHtml = matches.map(m => `
+    <tr>
+      <td style="padding:20px 0;border-bottom:1px solid #2E2E2E;">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${m.listing.title}</h3>
+        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${m.listing.locality} • ${m.listing.bhk} ${m.listing.furnishing.replace('_', ' ')} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
+        <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#E8A838;">${formatINR(m.listing.rent)}/month</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#888880;">Match score: ${m.score}% • Geography: ${m.scoreBreakdown.geography}% • Budget: ${m.scoreBreakdown.budget}% • BHK: ${m.scoreBreakdown.bhk}% • Timing: ${m.scoreBreakdown.timing}% • Lifestyle: ${m.scoreBreakdown.lifestyle}%</p>
+        <a href="${APP_URL}/matches/${m.matchId}" style="color:#E8A838;text-decoration:none;font-weight:500;">View & Respond →</a>
+      </td>
+    </tr>
+  `).join('');
+
+  const html = getEmailWrapper(`
+    <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Your daily matches</h1>
+    <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
+      You have ${matches.length} new match${matches.length !== 1 ? 'es' : ''} today. Review and respond within 7 days.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      ${matchItemsHtml}
+    </table>
+    <p style="margin:24px 0 0;font-size:14px;color:#888880;">
+      <a href="${APP_URL}/seekers" style="color:#E8A838;text-decoration:underline;">Manage your search preferences</a>
+    </p>
+  `, `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`);
+
+  try {
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`,
+      html,
+    });
+    return { success: true, emailId: result.data?.id };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+// ============================================
 // Helper (re-export from utils for email template)
 // ============================================
 

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf graphify-out)",
+      "Bash(python3 -c ' *)",
+      "Bash(mkdir -p \"/d/Vibe Coded/Rentinhyd/graphify-out\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: complete admin console, cron jobs, and all core features *)"
+    ]
+  }
+}

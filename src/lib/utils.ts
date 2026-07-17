@@ -151,7 +151,8 @@ export async function retryWithBackoff<T>(
 }
 
 // Safe JSON parse
-export function safeJsonParse<T>(json: string, fallback: T): T {
+export function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
+  if (json == null) return fallback;
   try {
     return JSON.parse(json);
   } catch {

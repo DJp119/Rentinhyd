@@ -12,25 +12,32 @@ interface VerifyState {
   details?: string;
 }
 
+function getDetailsMessage(resourceType?: string, resourceId?: string) {
+  switch (resourceType) {
+    case 'listing':
+      return `Your listing is now live on the map. Resource ID: ${resourceId?.slice(0, 8)}...`;
+    case 'seeker':
+      return `Your search request is now active. Resource ID: ${resourceId?.slice(0, 8)}...`;
+    case 'identity':
+      return 'Your email has been verified. You can now post listings and seeker requests.';
+    default:
+      return '';
+  }
+}
+
 function VerifyContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const type = searchParams.get('type') || 'verify';
 
   const [state, setState] = useState<VerifyState>({
-    status: 'loading',
-    message: 'Verifying...',
+    status: token ? 'loading' : 'error',
+    message: token ? 'Verifying...' : 'Invalid verification link',
+    details: token ? undefined : 'No token provided in the URL.',
   });
 
   useEffect(() => {
-    if (!token) {
-      setState({
-        status: 'error',
-        message: 'Invalid verification link',
-        details: 'No token provided in the URL.',
-      });
-      return;
-    }
+    if (!token) return;
 
     async function verify() {
       try {
@@ -68,19 +75,6 @@ function VerifyContent() {
 
     verify();
   }, [token, type]);
-
-  function getDetailsMessage(resourceType?: string, resourceId?: string) {
-    switch (resourceType) {
-      case 'listing':
-        return `Your listing is now live on the map. Resource ID: ${resourceId?.slice(0, 8)}...`;
-      case 'seeker':
-        return `Your search request is now active. Resource ID: ${resourceId?.slice(0, 8)}...`;
-      case 'identity':
-        return 'Your email has been verified. You can now post listings and seeker requests.';
-      default:
-        return '';
-    }
-  }
 
   function getActionLink() {
     switch (state.resourceType) {

@@ -1,0 +1,30 @@
+
+> hyderabad-rent@0.1.0 build
+> next build
+
+▲ Next.js 16.2.10 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  · serverActions
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./src/app/api/cron/matching/route.ts:3:1
+Export scoreMatch doesn't exist in target module
+  [90m1 |[0m [36mimport[0m { [33mNextResponse[0m } [36mfrom[0m [32m'next/server'[0m;
+  [90m2 |[0m [36mimport[0m { supabase } [36mfrom[0m [32m'@/lib/supabase'[0m;
+[31m[1m>[0m [90m3 |[0m [36mimport[0m { generateMatchingSQL, scoreMatch, [36mtype[0m [33mMatchParams[0m } [36mfrom[0m [32m'@/lib/matching'[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mimport[0m { sendMatchDigestEmail } [36mfrom[0m [32m'@/lib/email'[0m;
+  [90m5 |[0m [36mimport[0m { logger } [36mfrom[0m [32m'@/lib/observability'[0m;
+  [90m6 |[0m
+
+The export scoreMatch was not found in module [project]/src/lib/matching.ts [app-edge-route] (ecmascript).
+Did you mean to import scoreBhk?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+    at <unknown> (./src/app/api/cron/matching/route.ts:3:1)

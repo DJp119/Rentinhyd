@@ -9,7 +9,9 @@
       "Bash(npm install *)",
       "Bash(npx playwright *)",
       "Bash(npm run *)",
-      "Bash(git commit -m 'feat: add E2E test setup with Playwright and cron triggers *)"
+      "Bash(git commit -m 'feat: add E2E test setup with Playwright and cron triggers *)",
+      "Bash(npx vitest *)",
+      "Bash(git commit *)"
     ]
   }
 }

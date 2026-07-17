@@ -1,15 +1,15 @@
 // src/components/Map.tsx
-// Main MapLibre GL map component
+// Main Google Maps component
 
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { Loader } from '@googlemaps/js-api-loader';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { MapPin } from '@/lib/schemas';
+import { formatINR, formatRentRange } from '@/lib/utils';
 
 export type { MapPin };
-import { formatINR, formatRentRange } from '@/lib/utils';
 
 interface MapProps {
   initialBounds?: [number, number, number, number];
@@ -18,11 +18,122 @@ interface MapProps {
   className?: string;
 }
 
-const DEFAULT_CENTER: [number, number] = [78.365, 17.44];
+const DEFAULT_CENTER: google.maps.LatLngLiteral = { lat: 17.44, lng: 78.365 };
 const DEFAULT_ZOOM = 11;
-const TILE_URL = process.env.NEXT_PUBLIC_MAP_TILE_URL || 'https://tiles.openmaptiles.org/styles/osm-bright/{z}/{x}/{y}.png';
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+// Custom map style to match dark theme
+const DARK_MAP_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#0D0D0D' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0D0D0D' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+  {
+    featureType: 'administrative.locality',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#F5F5F0' }],
+  },
+  {
+    featureType: 'poi',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#746855' }],
+  },
+  {
+    featureType: 'poi.park',
+    elementType: 'geometry',
+    stylers: [{ color: '#1a1a1a' }],
+  },
+  {
+    featureType: 'poi.park',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#4a7c2e' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry',
+    stylers: [{ color: '#2a2a2a' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#1a1a1a' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#8a8a8a' }],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'geometry',
+    stylers: [{ color: '#3a3a3a' }],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#1a1a1a' }],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#b0b0b0' }],
+  },
+  {
+    featureType: 'transit',
+    elementType: 'geometry',
+    stylers: [{ color: '#2a2a2a' }],
+  },
+  {
+    featureType: 'transit.station',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#b0b0b0' }],
+  },
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: [{ color: '#0a1a2a' }],
+  },
+  {
+    featureType: 'water',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#4a6a8a' }],
+  },
+];
 
 type PinType = MapPin['type'];
+
+function createPinSVG(type: PinType, rent?: number, rentMin?: number, rentMax?: number, listingType?: string, pinCount?: number): string {
+  const size = 36;
+  const strokeWidth = 2.5;
+
+  if (type === 'rent_pin' && pinCount && pinCount > 1) {
+    // Cluster marker
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="18" cy="18" r="16" fill="#4CAF50" stroke="#0D0D0D" stroke-width="${strokeWidth}"/>
+      <text x="18" y="22" text-anchor="middle" fill="#F5F5F0" font-size="11" font-weight="bold" font-family="system-ui, sans-serif">${pinCount > 99 ? '99+' : pinCount}</text>
+    </svg>`;
+  }
+
+  if (type === 'rent_pin') {
+    // Rent pin: color by rent (green to red)
+    const avgRent = rentMin && rentMax ? (rentMin + rentMax) / 2 : (rent || 20000);
+    const hue = Math.max(0, Math.min(120, 120 - (avgRent - 10000) / 500)); // 120=green, 0=red
+    const color = `hsl(${hue}, 70%, 45%)`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <path d="M18 2 C10.3 2 4 8.3 4 16 c0 6.5 5.5 12 14 20 8.5-8 14-13.5 14-20 C32 8.3 25.7 2 18 2 z" fill="${color}" stroke="#0D0D0D" stroke-width="${strokeWidth}"/>
+      <circle cx="18" cy="16" r="5" fill="#0D0D0D"/>
+    </svg>`;
+  }
+
+  // Listing: gold for whole_flat, blue for room_flatmate
+  const color = listingType === 'whole_flat' ? '#E8A838' : '#4FC3F7';
+  const icon = listingType === 'whole_flat'
+    ? 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'
+    : 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">
+    <path d="${icon}" fill="${color}" stroke="#0D0D0D" stroke-width="1.5" transform="scale(1.3) translate(-2, -2)"/>
+  </svg>`;
+}
 
 export function MapComponent({
   initialBounds,
@@ -31,118 +142,171 @@ export function MapComponent({
   className = '',
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const clustererRef = useRef<MarkerClusterer | null>(null);
+  const markersRef = useRef<Map<google.maps.marker.AdvancedMarkerElement, MapPin>>(new Map());
+  const loaderRef = useRef<Loader | null>(null);
+
   const [pins, setPins] = useState<MapPin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mapsLoaded, setMapsLoaded] = useState(false);
 
-  // Update map layers with new pins
-  const updateMapLayers = (items: MapPin[]) => {
-    const map = mapRef.current;
-    if (!map) return;
+  // Initialize Google Maps loader
+  useEffect(() => {
+    if (!API_KEY) {
+      setError('Google Maps API key not configured');
+      return;
+    }
 
-    // Separate pins and listings
-    const rentPins = items.filter(i => i.type === 'rent_pin');
-    const listings = items.filter(i => i.type === 'listing');
+    loaderRef.current = new Loader({
+      apiKey: API_KEY,
+      version: 'weekly',
+      libraries: ['marker'],
+    });
 
-    // Update or create rent pin layer
-    updatePointLayer(map, 'rent-pins', rentPins, 'rent_pin');
-    updatePointLayer(map, 'listings', listings, 'listing');
-  };
+    loaderRef.current.load().then(() => {
+      setMapsLoaded(true);
+    }).catch((err) => {
+      setError(`Failed to load Google Maps: ${err.message}`);
+    });
+  }, []);
 
-  const updatePointLayer = (
-    map: maplibregl.Map,
-    layerId: string,
-    items: MapPin[],
-    type: PinType
-  ) => {
-    const sourceId = `${layerId}-source`;
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainer.current || mapRef.current || !mapsLoaded) return;
 
-    // Prepare GeoJSON
-    const geojson = {
-      type: 'FeatureCollection' as const,
-      features: items.map(item => ({
-        type: 'Feature' as const,
-        geometry: item.geom,
-        properties: {
-          id: item.id,
-          type: item.type,
-          ...('rentMin' in item ? { rentMin: item.rentMin, rentMax: item.rentMax } : { rent: item.rent }),
-          bhk: item.bhk,
-          furnishing: item.furnishing,
-          listingType: item.listingType,
-          locality: item.locality,
-          pinCount: item.pinCount,
+    const map = new google.maps.Map(mapContainer.current, {
+      center: DEFAULT_CENTER,
+      zoom: initialZoom,
+      restriction: initialBounds ? {
+        latLngBounds: {
+          north: initialBounds[3],
+          south: initialBounds[1],
+          east: initialBounds[2],
+          west: initialBounds[0],
         },
-      })),
-    };
+        strictBounds: false,
+      } : undefined,
+      mapTypeControl: true,
+      mapTypeControlOptions: {
+        mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain'],
+        position: google.maps.ControlPosition.TOP_RIGHT,
+      },
+      streetViewControl: false,
+      fullscreenControl: true,
+      zoomControl: true,
+      zoomControlOptions: {
+        position: google.maps.ControlPosition.RIGHT_CENTER,
+      },
+      scaleControl: true,
+      styles: DARK_MAP_STYLE,
+      backgroundColor: '#0D0D0D',
+      gestureHandling: 'cooperative',
+    });
 
-    // Add/update source
-    if (map.getSource(sourceId)) {
-      (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojson);
-    } else {
-      map.addSource(sourceId, { type: 'geojson', data: geojson, cluster: false });
+    mapRef.current = map;
 
-      // Add circle layer
-      map.addLayer({
-        id: layerId,
-        type: 'circle',
-        source: sourceId,
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            10, 8,
-            14, 12,
-            18, 16,
-          ],
-          'circle-color': getPinColorExpression(type),
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#0D0D0D',
-          'circle-opacity': 0.9,
+    // Marker clusterer instance (created lazily based on zoom)
+    let clusterer: MarkerClusterer | null = null;
+
+    const createClusterer = () => {
+      if (clusterer) clusterer.setMap(null);
+      clusterer = new MarkerClusterer({
+        map,
+        markers: [],
+        renderer: {
+          render: (cluster) => {
+            const count = cluster.markers.length;
+            if (count === 1) {
+              return cluster.markers[0];
+            }
+
+            const svg = createPinSVG('rent_pin', undefined, undefined, undefined, undefined, count);
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+              position: cluster.position,
+              map,
+              content: createMarkerContent(svg),
+              title: `${count} rent pins`,
+            });
+            (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = { type: 'rent_pin', pinCount: count } as MapPin;
+            return marker;
+          },
         },
       });
+      clustererRef.current = clusterer;
+      return clusterer;
+    };
 
-      // Add label layer for clusters
-      if (type === 'rent_pin') {
-        map.addLayer({
-          id: `${layerId}-labels`,
-          type: 'symbol',
-          source: sourceId,
-          layout: {
-            'text-field': ['get', 'pinCount'],
-            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-            'text-size': 12,
-            'text-anchor': 'center',
-          },
-          paint: {
-            'text-color': '#F5F5F0',
-            'text-halo-color': '#0D0D0D',
-            'text-halo-width': 2,
-          },
-          filter: ['>', ['get', 'pinCount'], 1],
-        });
-      }
+    // Initial clusterer if zoom < 13
+    if (map.getZoom()! < 13) {
+      createClusterer();
     }
-  };
+
+    // Load initial pins
+    loadPins(map.getBounds()!, map.getZoom()!);
+
+    // Map event listeners
+    const idleListener = map.addListener('idle', () => {
+      loadPins(map.getBounds()!, map.getZoom()!);
+    });
+
+    // Handle zoom changes - enable/disable clustering
+    const zoomListener = map.addListener('zoom_changed', () => {
+      const zoom = map.getZoom()!;
+      if (zoom >= 13 && clusterer) {
+        // Disable clustering at high zoom - remove clusterer, show individual markers
+        clusterer.setMap(null);
+        clusterer = null;
+        clustererRef.current = null;
+        // Re-render all markers individually
+        const mapRef2 = mapRef.current;
+        if (mapRef2) {
+          loadPins(mapRef2.getBounds()!, zoom);
+        }
+      } else if (zoom < 13 && !clusterer) {
+        // Enable clustering at low zoom
+        createClusterer();
+        const mapRef2 = mapRef.current;
+        if (mapRef2) {
+          loadPins(mapRef2.getBounds()!, zoom);
+        }
+      }
+    });
+
+    const clickListener = map.addListener('click', (e: google.maps.MapMouseEvent) => {
+      if (!onPinClick) return;
+    });
+
+    return () => {
+      google.maps.event.removeListener(idleListener);
+      google.maps.event.removeListener(zoomListener);
+      google.maps.event.removeListener(clickListener);
+      clusterer?.setMap(null);
+      clustererRef.current = null;
+      mapRef.current = null;
+    };
+  }, [mapsLoaded, onPinClick]);
 
   // Load pins for current viewport
-  const loadPins = useCallback(async (bounds: maplibregl.LngLatBounds, zoom: number) => {
+  const loadPins = useCallback(async (bounds: google.maps.LatLngBounds, zoom: number) => {
     if (!mapRef.current) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
       const response = await fetch(`/api/map?bbox=${bbox}&zoom=${Math.round(zoom)}&type=all`);
 
       if (!response.ok) throw new Error('Failed to load map data');
 
       const data = await response.json();
-      setPins(data.items || []);
-      updateMapLayers(data.items || []);
+      const newPins = data.items || [];
+      setPins(newPins);
+      updateMarkers(newPins);
     } catch (err) {
       setError((err as Error).message);
       console.error('Map load error:', err);
@@ -151,119 +315,69 @@ export function MapComponent({
     }
   }, []);
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
-
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'osm-tiles': {
-            type: 'raster',
-            tiles: [TILE_URL],
-            tileSize: 256,
-            attribution: '© OpenMapTiles © OpenStreetMap contributors',
-          },
-        },
-        layers: [
-          {
-            id: 'background',
-            type: 'background',
-            paint: { 'background-color': '#0D0D0D' },
-          },
-          {
-            id: 'tiles',
-            type: 'raster',
-            source: 'osm-tiles',
-            minzoom: 0,
-            maxzoom: 22,
-          },
-        ],
-      },
-      center: DEFAULT_CENTER,
-      zoom: initialZoom,
-      bounds: initialBounds ? [
-        [initialBounds[0], initialBounds[1]],
-        [initialBounds[2], initialBounds[3]],
-      ] : undefined,
-      attributionControl: false,
-    });
-
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-    map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
-
-    mapRef.current = map;
-
-    // Load initial pins
-    loadPins(map.getBounds(), map.getZoom());
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, [loadPins]);
-
-  // Handle map move/zoom
-  useEffect(() => {
+  // Update markers on map
+  const updateMarkers = useCallback((items: MapPin[]) => {
     const map = mapRef.current;
+    const clusterer = clustererRef.current;
     if (!map) return;
 
-    let timeoutId: NodeJS.Timeout;
+    // Remove old markers
+    const oldMarkers = Array.from(markersRef.current.keys());
+    if (clusterer) {
+      oldMarkers.forEach(m => clusterer.removeMarker(m));
+    } else {
+      oldMarkers.forEach(m => { m.map = null; });
+    }
+    markersRef.current.clear();
 
-    const handleMoveEnd = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        loadPins(map.getBounds(), map.getZoom());
-      }, 150);
-    };
+    // Create new markers
+    const newMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
 
-    map.on('moveend', handleMoveEnd);
-    map.on('zoomend', handleMoveEnd);
+    items.forEach(item => {
+      const position = new google.maps.LatLng(item.geom.coordinates[1], item.geom.coordinates[0]);
+      const svg = createPinSVG(
+        item.type,
+        item.rent,
+        item.rentMin,
+        item.rentMax,
+        item.listingType,
+        item.pinCount
+      );
 
-    return () => {
-      map.off('moveend', handleMoveEnd);
-      map.off('zoomend', handleMoveEnd);
-      clearTimeout(timeoutId);
-    };
-  }, [loadPins]);
-
-  // Handle click on pins
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !onPinClick) return;
-
-    const handleClick = (e: maplibregl.MapMouseEvent) => {
-      const features = map.queryRenderedFeatures(e.point, {
-        layers: ['rent-pins', 'listings'],
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        position,
+        map,
+        content: createMarkerContent(svg),
+        title: item.type === 'rent_pin'
+          ? `Rent: ${formatRentRange(item.rentMin || 0, item.rentMax || 0)}`
+          : `Listing: ${formatINR(item.rent || 0)}`,
       });
 
-      if (features.length > 0) {
-        const feature = features[0];
-        const pin = pins.find(p => p.id === feature.properties.id);
-        if (pin) onPinClick(pin);
-      }
-    };
+      (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = item;
 
-    map.on('click', handleClick);
-    map.getCanvas().style.cursor = 'default';
-
-    // Change cursor on hover
-    const handleMouseMove = (e: maplibregl.MapMouseEvent) => {
-      const features = map.queryRenderedFeatures(e.point, {
-        layers: ['rent-pins', 'listings'],
+      marker.addListener('click', () => {
+        if (onPinClick) {
+          onPinClick(item);
+        }
       });
-      map.getCanvas().style.cursor = features.length > 0 ? 'pointer' : '';
-    };
 
-    map.on('mousemove', handleMouseMove);
+      newMarkers.push(marker);
+      markersRef.current.set(marker, item);
+    });
 
-    return () => {
-      map.off('click', handleClick);
-      map.off('mousemove', handleMouseMove);
-    };
-  }, [pins, onPinClick]);
+    // Add to clusterer if available
+    if (clusterer) {
+      clusterer.addMarkers(newMarkers);
+    }
+  }, [onPinClick]);
+
+  // Helper to create marker content div
+  const createMarkerContent = (svg: string) => {
+    const div = document.createElement('div');
+    div.innerHTML = svg;
+    div.style.cursor = 'pointer';
+    return div;
+  };
 
   if (error) {
     return (
@@ -271,7 +385,7 @@ export function MapComponent({
         <div className="text-center p-4">
           <p className="text-error mb-2">Failed to load map</p>
           <button
-            onClick={() => mapRef.current && loadPins(mapRef.current.getBounds(), mapRef.current.getZoom())}
+            onClick={() => mapRef.current && loadPins(mapRef.current.getBounds()!, mapRef.current.getZoom()!)}
             className="btn-primary"
           >
             Retry
@@ -281,17 +395,30 @@ export function MapComponent({
     );
   }
 
+  if (!mapsLoaded) {
+    return (
+      <div className={`w-full h-full ${className}`} style={{ minHeight: '400px' }}>
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2"></div>
+            <p className="text-textMuted text-sm">Loading Google Maps...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={mapContainer}
       className={`w-full h-full ${className}`}
-      style={{ minHeight: '400px' }}
+      style={{ minHeight: '400px', backgroundColor: '#0D0D0D' }}
     >
       {loading && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 pointer-events-none">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2"></div>
-            <p className="text-textMuted text-sm">Loading map...</p>
+            <p className="text-textMuted text-sm">Loading pins...</p>
           </div>
         </div>
       )}
@@ -299,31 +426,7 @@ export function MapComponent({
   );
 }
 
-function getPinColorExpression(type: PinType) {
-  if (type === 'rent_pin') {
-    return [
-      'interpolate',
-      ['linear'],
-      ['+', ['get', 'rentMin'], ['get', 'rentMax']],
-      0, '#4CAF50',
-      15000, '#4CAF50',
-      25000, '#8BC34A',
-      40000, '#FFB300',
-      60000, '#FF9800',
-      100000, '#EF5350',
-    ] as maplibregl.DataDrivenPropertyValueSpecification<string>;
-  }
-
-  return [
-    'match',
-    ['get', 'listingType'],
-    'whole_flat', '#E8A838',
-    'room_flatmate', '#4FC3F7',
-    '#E8A838',
-  ] as maplibregl.DataDrivenPropertyValueSpecification<string>;
-}
-
-// Pin Bottom Sheet Component
+// Pin Bottom Sheet Component (unchanged)
 interface PinBottomSheetProps {
   pin: MapPin | null;
   onClose: () => void;

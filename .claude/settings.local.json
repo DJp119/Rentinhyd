@@ -5,7 +5,11 @@
       "Bash(python3 -c ' *)",
       "Bash(mkdir -p \"/d/Vibe Coded/Rentinhyd/graphify-out\")",
       "Bash(git add *)",
-      "Bash(git commit -m 'feat: complete admin console, cron jobs, and all core features *)"
+      "Bash(git commit -m 'feat: complete admin console, cron jobs, and all core features *)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(npm run *)",
+      "Bash(git commit -m 'feat: add E2E test setup with Playwright and cron triggers *)"
     ]
   }
 }

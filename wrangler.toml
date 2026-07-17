@@ -9,6 +9,10 @@ name = "hyderabad-rent-prod"
 [vars]
 NODE_ENV = "production"
 
+# Cron triggers for scheduled jobs
+[triggers]
+crons = ["0 6 * * *", "0 8 * * *"]
+
 # Kubernetes-style bindings will be set via wrangler secret put
 # SUPABASE_URL
 # SUPABASE_ANON_KEY

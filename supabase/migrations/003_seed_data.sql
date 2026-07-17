@@ -108,79 +108,79 @@ CREATE POLICY metro_lines_public_read ON metro_lines FOR SELECT USING (TRUE);
 INSERT INTO metro_lines (name, color, geom) VALUES
 ('Red Line', '#E53935',
     ST_GeomFromText('LINESTRING(
-        78.3500 17.5000,  -- Miyapur
-        78.3550 17.4950,  -- JNTU College
-        78.3650 17.4850,  -- KPHB Colony
-        78.3750 17.4750,  -- Kukatpally
-        78.3850 17.4650,  -- Balanagar
-        78.3900 17.4550,  -- Moosapet
-        78.3950 17.4450,  -- Bharat Nagar
-        78.4000 17.4350,  -- Erragadda
-        78.4083 17.4325,  -- Jubilee Hills Check Post
-        78.4150 17.4250,  -- Peddamma Temple
-        78.4200 17.4180,  -- Banjara Hills
-        78.4250 17.4100,  -- Ameerpet
-        78.4300 17.4000,  -- Punjagutta
-        78.4350 17.3900,  -- Irrum Manzil
-        78.4400 17.3800,  -- Khairatabad
-        78.4450 17.3700,  -- Lakdi-ka-pul
-        78.4500 17.3600,  -- Assembly
-        78.4550 17.3500,  -- Nampally
-        78.4600 17.3400,  -- Gandhi Bhavan
-        78.4650 17.3300,  -- Osmania Medical College
-        78.4700 17.3200,  -- MG Bus Station
-        78.4750 17.3100,  -- Sultan Bazar
-        78.4800 17.3000,  -- Malakpet
-        78.4850 17.2900,  -- New Market
-        78.4900 17.2800,  -- Musarambagh
-        78.4950 17.2700,  -- Dilsukhnagar
-        78.5000 17.2600,  -- Chaitanyapuri
-        78.5050 17.2500,  -- Victoria Memorial
-        78.5100 17.2400   -- LB Nagar
+        78.3500 17.5000,
+        78.3550 17.4950,
+        78.3650 17.4850,
+        78.3750 17.4750,
+        78.3850 17.4650,
+        78.3900 17.4550,
+        78.3950 17.4450,
+        78.4000 17.4350,
+        78.4083 17.4325,
+        78.4150 17.4250,
+        78.4200 17.4180,
+        78.4250 17.4100,
+        78.4300 17.4000,
+        78.4350 17.3900,
+        78.4400 17.3800,
+        78.4450 17.3700,
+        78.4500 17.3600,
+        78.4550 17.3500,
+        78.4600 17.3400,
+        78.4650 17.3300,
+        78.4700 17.3200,
+        78.4750 17.3100,
+        78.4800 17.3000,
+        78.4850 17.2900,
+        78.4900 17.2800,
+        78.4950 17.2700,
+        78.5000 17.2600,
+        78.5050 17.2500,
+        78.5100 17.2400
     )', 4326)),
 
 -- Blue Line: Nagole ↔ Raidurg
 ('Blue Line', '#1E88E5',
     ST_GeomFromText('LINESTRING(
-        78.5500 17.3400,  -- Nagole
-        78.5400 17.3500,  -- Uppal
-        78.5300 17.3600,  -- Survey of India
-        78.5200 17.3700,  -- Habsiguda
-        78.5100 17.3800,  -- Tarnaka
-        78.5000 17.3900,  -- Mettuguda
-        78.4900 17.4000,  -- Secunderabad East
-        78.4800 17.4100,  -- Paradise
-        78.4700 17.4200,  -- Parade Ground
-        78.4600 17.4300,  -- Secunderabad West
-        78.4500 17.4400,  -- Gandhi Hospital
-        78.4400 17.4500,  -- Musheerabad
-        78.4300 17.4550,  -- RTC X Roads
-        78.4250 17.4600,  -- Chikkadpally
-        78.4200 17.4650,  -- Narayanaguda
-        78.4150 17.4700,  -- Sultan Bazar
-        78.4250 17.4100,  -- Ameerpet (interchange)
-        78.4150 17.4200,  -- S R Nagar
-        78.4050 17.4300,  -- ESI Hospital
-        78.3950 17.4400,  -- Bharat Nagar
-        78.3850 17.4500,  -- Erragadda
-        78.3800 17.4450,  -- Moosapet
-        78.3750 17.4400,  -- Dr. B R Ambedkar Balanagar
-        78.3700 17.4350,  -- Kukatpally
-        78.3650 17.4300,  -- KPHB Colony
-        78.3550 17.4250,  -- JNTU College
-        78.3450 17.4200,  -- Gachibowli
-        78.3350 17.4150,  -- Financial District
-        78.3250 17.4100   -- Raidurg
+        78.5500 17.3400,
+        78.5400 17.3500,
+        78.5300 17.3600,
+        78.5200 17.3700,
+        78.5100 17.3800,
+        78.5000 17.3900,
+        78.4900 17.4000,
+        78.4800 17.4100,
+        78.4700 17.4200,
+        78.4600 17.4300,
+        78.4500 17.4400,
+        78.4400 17.4500,
+        78.4300 17.4550,
+        78.4250 17.4600,
+        78.4200 17.4650,
+        78.4150 17.4700,
+        78.4250 17.4100,
+        78.4150 17.4200,
+        78.4050 17.4300,
+        78.3950 17.4400,
+        78.3850 17.4500,
+        78.3800 17.4450,
+        78.3750 17.4400,
+        78.3700 17.4350,
+        78.3650 17.4300,
+        78.3550 17.4250,
+        78.3450 17.4200,
+        78.3350 17.4150,
+        78.3250 17.4100
     )', 4326)),
 
 -- Green Line: JBS Parade Ground ↔ MGBS (partial - planned/under construction)
 ('Green Line', '#43A047',
     ST_GeomFromText('LINESTRING(
-        78.4700 17.4200,  -- Parade Ground
-        78.4650 17.4100,  -- Secunderabad
-        78.4600 17.4000,  -- M G Road
-        78.4550 17.3900,  -- Sultan Bazar
-        78.4700 17.3200   -- MG Bus Station
+        78.4700 17.4200,
+        78.4650 17.4100,
+        78.4600 17.4000,
+        78.4550 17.3900,
+        78.4700 17.3200
     )', 4326))
 
 ON CONFLICT DO NOTHING;

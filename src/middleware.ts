@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const ALLOWED_ORIGIN = 'https://hyderabad.rent';
+const ALLOWED_ORIGIN = 'https://rentinhyderabad.in';
 const ALLOWED_METHODS = 'GET, POST, OPTIONS';
 const ALLOWED_HEADERS = 'Content-Type, Authorization';
 

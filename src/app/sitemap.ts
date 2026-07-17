@@ -16,7 +16,7 @@ const KNOWN_LOCALITIES = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://hyderabad.rent';
+  const baseUrl = 'https://rentinhyderabad.in';
 
   // Use known localities for sitemap generation without Supabase dependency
   // The sitemap will be regenerated periodically with real data

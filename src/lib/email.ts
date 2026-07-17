@@ -4,10 +4,16 @@
 import { Resend } from 'resend';
 import { generateVerificationPair, generateActionPair } from './tokens';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY not configured');
+  }
+  return new Resend(apiKey);
+}
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@hyderabad.rent';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://hyderabad.rent';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@rentinhyderabad.in';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://rentinhyderabad.in';
 
 // ============================================
 // Email Templates
@@ -70,7 +76,7 @@ export async function sendIdentityVerificationEmail(
   `, 'Verify your email to access hyderabad.rent');
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Verify your email - hyderabad.rent',
@@ -101,7 +107,7 @@ export async function sendListingVerificationEmail(
   `, 'Verify your email to publish your listing');
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Verify your listing - hyderabad.rent',
@@ -132,7 +138,7 @@ export async function sendSeekerVerificationEmail(
   `, 'Verify your email to activate your search');
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Verify your search - hyderabad.rent',
@@ -196,7 +202,7 @@ export async function sendMatchDigestEmail(
   `, `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`,
@@ -250,7 +256,7 @@ export async function sendIntroductionEmail(
   `, `You're connected: ${matchContext.listingTitle} in ${matchContext.locality}`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `You're connected: ${matchContext.listingTitle}`,
@@ -280,7 +286,7 @@ export async function sendListingApprovedEmail(
   `, `Your listing "${listingTitle}" is live`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `Listing approved: ${listingTitle}`,
@@ -307,7 +313,7 @@ export async function sendListingRentedEmail(
   `, `Your listing "${listingTitle}" is now rented`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `Listing rented: ${listingTitle}`,
@@ -382,7 +388,7 @@ export async function sendDailyDigestEmail(
   `, `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`,

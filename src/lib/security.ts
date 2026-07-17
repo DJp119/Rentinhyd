@@ -53,8 +53,8 @@ export function getSecurityHeaders(): Record<string, string> {
 export const CORS_CONFIG = {
   // Only allow our domain and localhost for development
   origin: [
-    'https://hyderabad.rent',
-    'https://www.hyderabad.rent',
+    'https://rentinhyderabad.in',
+    'https://www.rentinhyderabad.in',
     process.env.NEXT_PUBLIC_APP_URL,
   ].filter(Boolean) as string[],
   methods: ['GET', 'POST', 'OPTIONS'],

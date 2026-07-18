@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export const metadata: Metadata = {
   title: 'Manage Listings | Admin | hyderabad.rent',

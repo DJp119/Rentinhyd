@@ -1,14 +1,13 @@
-// src/middleware.ts
-// Security headers and CORS middleware for Edge Runtime
+// src/proxy.ts
+// Security headers and CORS proxy for Edge Runtime (Next.js 16+)
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 const ALLOWED_ORIGIN = 'https://rentinhyderabad.in';
 const ALLOWED_METHODS = 'GET, POST, OPTIONS';
 const ALLOWED_HEADERS = 'Content-Type, Authorization';
 
-export function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
   // Security headers on all responses
@@ -46,13 +45,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 };

@@ -8,6 +8,7 @@ import { formatINR, formatRentRange } from '@/lib/utils';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 interface PageProps {
   params: Promise<{ locality: string }>;

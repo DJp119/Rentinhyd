@@ -6,6 +6,7 @@ import { getMatchStats, getReportStats } from '@/lib/aggregates';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export const metadata: Metadata = {
   title: 'Admin Console | hyderabad.rent',

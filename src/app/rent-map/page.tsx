@@ -6,6 +6,7 @@ import { getCityStats } from '@/lib/aggregates';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 export const metadata: Metadata = {
   title: 'Hyderabad Rent Map | Interactive Map | hyderabad.rent',

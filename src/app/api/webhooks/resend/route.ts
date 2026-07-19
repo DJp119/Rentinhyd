@@ -6,7 +6,6 @@ import { resendWebhookSchema } from '@/lib/schemas';
 import { handleResendWebhook } from '@/lib/webhooks';
 import { logger } from '@/lib/observability';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

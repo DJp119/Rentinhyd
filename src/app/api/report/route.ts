@@ -9,7 +9,6 @@ import { verifyTurnstileToken, hashEmail } from '@/lib/security';
 import { generateRequestFingerprint } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

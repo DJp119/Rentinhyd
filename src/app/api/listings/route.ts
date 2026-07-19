@@ -13,7 +13,6 @@ import { hashEmail } from '@/lib/security';
 import { generateVerificationPair, hashToken } from '@/lib/tokens';
 import { sendListingVerificationEmail } from '@/lib/email';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

@@ -7,7 +7,6 @@ import { mapQuerySchema, mapResponseSchema, type MapQuery } from '@/lib/schemas'
 import { logger } from '@/lib/observability';
 import { parseBbox, isValidBbox } from '@/lib/utils';
 
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();

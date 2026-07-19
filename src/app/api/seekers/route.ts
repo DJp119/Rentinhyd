@@ -13,7 +13,6 @@ import { hashEmail } from '@/lib/security';
 import { generateVerificationPair } from '@/lib/tokens';
 import { sendSeekerVerificationEmail } from '@/lib/email';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

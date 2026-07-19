@@ -6,7 +6,6 @@ import { generateToken } from '@/lib/tokens';
 import { logger } from '@/lib/observability';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 

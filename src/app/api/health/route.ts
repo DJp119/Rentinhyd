@@ -4,7 +4,6 @@
 import { NextResponse } from 'next/server';
 import { runHealthChecks, healthResponseSchema } from '@/lib/observability';
 
-export const runtime = 'edge';
 
 export async function GET() {
   const health = await runHealthChecks();

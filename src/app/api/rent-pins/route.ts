@@ -8,6 +8,7 @@ import { logger } from '@/lib/observability';
 import { verifyTurnstileToken } from '@/lib/security';
 import { applyPrivacyJitter, getLocalityFromPoint, generateRequestFingerprint } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
+import { logError } from '@/lib/observability';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
 
 
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    requestLogger.error('rent_pins.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('rent_pins.error', error, { endpoint: '/api/rent-pins', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

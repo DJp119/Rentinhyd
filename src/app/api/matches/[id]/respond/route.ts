@@ -9,6 +9,7 @@ import { hashToken } from '@/lib/tokens';
 import { sendIntroductionEmail } from '@/lib/email';
 import { logAuditEvent } from '@/lib/supabase';
 import { generateActionPair } from '@/lib/tokens';
+import { logError } from '@/lib/observability';
 
 
 export async function POST(
@@ -17,9 +18,11 @@ export async function POST(
 ) {
   const startTime = Date.now();
   const requestLogger = logger.child({ endpoint: '/api/matches/respond' });
+  let matchId: string | undefined;
 
   try {
     const { id } = await params;
+    matchId = id;
     const body = await request.json();
     const validation = matchRespondSchema.safeParse(body);
     if (!validation.success) {
@@ -219,7 +222,7 @@ export async function POST(
 
     return NextResponse.json(response);
   } catch (error) {
-    requestLogger.error('matches.respond.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('matches.respond.error', error, { endpoint: '/api/matches/respond', matchId, durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

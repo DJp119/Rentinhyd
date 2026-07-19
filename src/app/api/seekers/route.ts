@@ -8,6 +8,7 @@ import { logger } from '@/lib/observability';
 import { verifyTurnstileToken } from '@/lib/security';
 import { generateRequestFingerprint } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
+import { logError } from '@/lib/observability';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
 import { hashEmail } from '@/lib/security';
 import { generateVerificationPair } from '@/lib/tokens';
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    requestLogger.error('seekers.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('seekers.error', error, { endpoint: '/api/seekers', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

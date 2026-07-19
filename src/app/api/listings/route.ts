@@ -198,7 +198,6 @@ export async function POST(request: NextRequest) {
     const response = listingResponseSchema.parse({
       id: listing.id,
       status: 'pending',
-      verificationToken, // Only returned once
       message: 'Listing submitted. Please verify your email to publish it.',
     });
 

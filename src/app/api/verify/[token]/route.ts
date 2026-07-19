@@ -97,41 +97,57 @@ export async function POST(
       return NextResponse.json(response);
     }
 
-    // Try seeker verification (stored in email_events)
-    const { data: emailEvent } = await supabase
-      .from('email_events')
-      .select('related_id, to_email')
-      .eq('body_hash', tokenHash)
-      .eq('email_type', 'verification')
+    // Try seeker verification (stored in verification_tokens table)
+    const { data: verificationToken } = await supabase
+      .from('verification_tokens')
+      .select('resource_id, expires_at, consumed_at')
+      .eq('token_hash', tokenHash)
+      .eq('resource_type', 'seeker')
       .single();
 
-    if (emailEvent) {
+    if (verificationToken) {
+      // Check if token is expired
+      if (new Date(verificationToken.expires_at) < new Date()) {
+        return NextResponse.json(
+          { success: false, message: 'Verification token has expired' },
+          { status: 400 }
+        );
+      }
+
+      // Check if token already consumed
+      if (verificationToken.consumed_at) {
+        return NextResponse.json(
+          { success: false, message: 'Verification token already used' },
+          { status: 400 }
+        );
+      }
+
       // Verify seeker
       const { error } = await supabase
         .from('seek_requests')
         .update({ status: 'approved', approved_at: new Date().toISOString() })
-        .eq('id', emailEvent.related_id);
+        .eq('id', verificationToken.resource_id);
 
       if (error) throw error;
 
-      // Mark email event as processed
+      // Mark token as consumed
       await supabase
-        .from('email_events')
-        .update({ status: 'processed', processed_at: new Date().toISOString() })
-        .eq('id', emailEvent.related_id);
+        .from('verification_tokens')
+        .update({ consumed_at: new Date().toISOString() })
+        .eq('token_hash', tokenHash);
 
       await logAuditEvent({
         event_type: 'seeker_verified',
         actor_type: 'user',
         target_type: 'seeker',
-        target_id: emailEvent.related_id,
+        target_id: verificationToken.resource_id,
         payload: { method: 'email_token' },
       });
 
       const response = verifyResponseSchema.parse({
         success: true,
         message: 'Search verified and activated!',
-        resourceId: emailEvent.related_id,
+        resourceId: verificationToken.resource_id,
         resourceType: 'seeker',
       });
 
@@ -143,8 +159,8 @@ export async function POST(
       .from('identities')
       .select('id, email')
       .eq('email', (
-        await supabase.from('email_events').select('to_email').eq('body_hash', tokenHash).single()
-      ).data?.to_email || '')
+        await supabase.from('verification_tokens').select('token_hash').eq('token_hash', tokenHash).eq('resource_type', 'identity').single()
+      ).data?.token_hash || '')
       .single();
 
     if (identity) {

@@ -89,17 +89,16 @@ const TAG_LENGTH = 16;
 
 async function getEncryptionKey(): Promise<CryptoKey> {
   const keyHex = process.env.ENCRYPTION_KEY;
-  let keyData: Uint8Array;
+  if (!keyHex) {
+    throw new Error('ENCRYPTION_KEY environment variable is required (64-char hex)');
+  }
+  if (keyHex.length !== 64 || !/^[0-9a-f]+$/i.test(keyHex)) {
+    throw new Error('ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
+  }
 
-  if (keyHex) {
-    // Convert hex string to bytes
-    keyData = new Uint8Array(keyHex.length / 2);
-    for (let i = 0; i < keyHex.length; i += 2) {
-      keyData[i / 2] = parseInt(keyHex.substr(i, 2), 16);
-    }
-  } else {
-    // Generate random key for development (not for production use)
-    keyData = crypto.getRandomValues(new Uint8Array(32));
+  const keyData = new Uint8Array(32);
+  for (let i = 0; i < 64; i += 2) {
+    keyData[i / 2] = parseInt(keyHex.substr(i, 2), 16);
   }
 
   return crypto.subtle.importKey(
@@ -208,8 +207,8 @@ export async function verifyTurnstileToken(
 ): Promise<{ success: boolean; error?: string }> {
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
   if (!secretKey) {
-    // In development, allow without verification
-    if (process.env.NODE_ENV === 'development') {
+    // Only allow bypass if explicitly enabled via env var (never NODE_ENV)
+    if (process.env.TURNSTILE_BYPASS_DEV === 'true') {
       return { success: true };
     }
     return { success: false, error: 'Turnstile not configured' };

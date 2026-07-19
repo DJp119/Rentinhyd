@@ -15,6 +15,18 @@ function getResendClient(): Resend {
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@rentinhyderabad.in';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://rentinhyderabad.in';
 
+/**
+ * Escape HTML special characters to prevent XSS in email templates
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&apos;');
+}
+
 // ============================================
 // Email Templates
 // ============================================
@@ -179,10 +191,10 @@ export async function sendMatchDigestEmail(
   const matchItemsHtml = matches.map(m => `
     <tr>
       <td style="padding:20px 0;border-bottom:1px solid #2E2E2E;">
-        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${m.listing.title}</h3>
-        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${m.listing.locality} • ${m.listing.bhk} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${escapeHtml(m.listing.title)}</h3>
+        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${escapeHtml(m.listing.locality)} • ${escapeHtml(m.listing.bhk)} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
         <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#E8A838;">${formatINR(m.listing.rent)}/month</p>
-        <p style="margin:0 0 12px;font-size:13px;color:#888880;">Match score: ${m.score}% • Seeker: ${m.seekerProfile.budgetRange} • ${m.seekerProfile.moveInWindow}</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#888880;">Match score: ${m.score}% • Seeker: ${escapeHtml(m.seekerProfile.budgetRange)} • ${escapeHtml(m.seekerProfile.moveInWindow)}</p>
         <a href="${APP_URL}/matches/${m.matchId}?token=${unsubscribeToken}" style="color:#E8A838;text-decoration:none;font-weight:500;">View & Respond →</a>
       </td>
     </tr>
@@ -232,14 +244,14 @@ export async function sendIntroductionEmail(
   const withdrawalUrl = `${APP_URL}/withdraw?token=${withdrawalToken}`;
 
   const contactHtml = `
-    <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#F5F5F0;"><strong>Contact:</strong> ${contactInfo.name}</p>
-    ${contactInfo.phone ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">📞 ${contactInfo.phone}</p>` : ''}
-    ${contactInfo.email ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">✉️ ${contactInfo.email}</p>` : ''}
-    <p style="margin:8px 0 0;font-size:13px;color:#888880;">Preferred: ${contactInfo.preferredMethod}${contactInfo.contactWindow ? ` (${contactInfo.contactWindow})` : ''}</p>
+    <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#F5F5F0;"><strong>Contact:</strong> ${escapeHtml(contactInfo.name)}</p>
+    ${contactInfo.phone ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">📞 ${escapeHtml(contactInfo.phone)}</p>` : ''}
+    ${contactInfo.email ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">✉️ ${escapeHtml(contactInfo.email)}</p>` : ''}
+    <p style="margin:8px 0 0;font-size:13px;color:#888880;">Preferred: ${escapeHtml(contactInfo.preferredMethod)}${contactInfo.contactWindow ? ` (${escapeHtml(contactInfo.contactWindow)})` : ''}</p>
   `;
 
   const html = getEmailWrapper(`
-    <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Introduction: ${matchContext.listingTitle}</h1>
+    <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Introduction: ${escapeHtml(matchContext.listingTitle)}</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
       Both parties have accepted the match. Here are the contact details:
     </p>
@@ -253,7 +265,7 @@ export async function sendIntroductionEmail(
     <p style="margin:24px 0 0;font-size:14px;color:#888880;">
       <a href="${withdrawalUrl}" style="color:#EF5350;text-decoration:underline;">Withdraw from this introduction</a>
     </p>
-  `, `You're connected: ${matchContext.listingTitle} in ${matchContext.locality}`);
+  `, `You're connected: ${escapeHtml(matchContext.listingTitle)} in ${escapeHtml(matchContext.locality)}`);
 
   try {
     const result = await getResendClient().emails.send({
@@ -280,10 +292,10 @@ export async function sendListingApprovedEmail(
   const html = getEmailWrapper(`
     <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#4CAF50;">Listing approved</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
-      Your listing <strong>"${listingTitle}"</strong> has been approved and is now visible to seekers.
+      Your listing <strong>"${escapeHtml(listingTitle)}"</strong> has been approved and is now visible to seekers.
     </p>
     ${getButton(listingUrl, 'View Listing')}
-  `, `Your listing "${listingTitle}" is live`);
+  `, `Your listing "${escapeHtml(listingTitle)}" is live`);
 
   try {
     const result = await getResendClient().emails.send({
@@ -305,12 +317,12 @@ export async function sendListingRentedEmail(
   const html = getEmailWrapper(`
     <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Listing marked as rented</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
-      Your listing <strong>"${listingTitle}"</strong> has been marked as rented and is no longer visible to seekers.
+      Your listing <strong>"${escapeHtml(listingTitle)}"</strong> has been marked as rented and is no longer visible to seekers.
     </p>
     <p style="margin:0;font-size:14px;color:#888880;">
       You can relist it anytime from your dashboard.
     </p>
-  `, `Your listing "${listingTitle}" is now rented`);
+  `, `Your listing "${escapeHtml(listingTitle)}" is now rented`);
 
   try {
     const result = await getResendClient().emails.send({
@@ -365,8 +377,8 @@ export async function sendDailyDigestEmail(
   const matchItemsHtml = matches.map(m => `
     <tr>
       <td style="padding:20px 0;border-bottom:1px solid #2E2E2E;">
-        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${m.listing.title}</h3>
-        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${m.listing.locality} • ${m.listing.bhk} ${m.listing.furnishing.replace('_', ' ')} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${escapeHtml(m.listing.title)}</h3>
+        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${escapeHtml(m.listing.locality)} • ${escapeHtml(m.listing.bhk)} ${escapeHtml(m.listing.furnishing.replace('_', ' '))} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
         <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#E8A838;">${formatINR(m.listing.rent)}/month</p>
         <p style="margin:0 0 12px;font-size:13px;color:#888880;">Match score: ${m.score}% • Geography: ${m.scoreBreakdown.geography}% • Budget: ${m.scoreBreakdown.budget}% • BHK: ${m.scoreBreakdown.bhk}% • Timing: ${m.scoreBreakdown.timing}% • Lifestyle: ${m.scoreBreakdown.lifestyle}%</p>
         <a href="${APP_URL}/matches/${m.matchId}" style="color:#E8A838;text-decoration:none;font-weight:500;">View & Respond →</a>

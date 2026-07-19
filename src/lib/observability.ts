@@ -191,6 +191,29 @@ export function captureMessage(message: string, level: LogLevel = 'info', contex
   logger[level](message, context);
 }
 
+/**
+ * Log an error with full stack trace and structured context.
+ * Use in catch blocks so every error is visible in logs.
+ */
+export function logError(
+  message: string,
+  error: unknown,
+  context: LogContext = {}
+): void {
+  const err = error instanceof Error ? error : new Error(String(error));
+  logger.error(message, {
+    ...context,
+    error: {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      cause: err.cause instanceof Error
+        ? { name: err.cause.name, message: err.cause.message }
+        : err.cause,
+    },
+  });
+}
+
 // ============================================
 // Health Checks
 // ============================================

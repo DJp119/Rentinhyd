@@ -8,6 +8,7 @@ import { logger } from '@/lib/observability';
 import { hashToken, verifyToken } from '@/lib/tokens';
 import { sendListingApprovedEmail, sendSeekerVerificationEmail } from '@/lib/email';
 import { logAuditEvent } from '@/lib/supabase';
+import { logError } from '@/lib/observability';
 
 
 export async function POST(
@@ -177,7 +178,7 @@ export async function POST(
       { status: 404 }
     );
   } catch (error) {
-    requestLogger.error('verify.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('verify.error', error, { endpoint: '/api/verify', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

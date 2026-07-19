@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resendWebhookSchema } from '@/lib/schemas';
 import { handleResendWebhook } from '@/lib/webhooks';
-import { logger } from '@/lib/observability';
+import { logger, logError } from '@/lib/observability';
 
 
 export async function POST(request: NextRequest) {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       action: result.action,
     });
   } catch (error) {
-    requestLogger.error('webhook.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('webhook.error', error, { endpoint: '/api/webhooks/resend', durationMs: Date.now() - startTime });
     // Return 200 to avoid retries for unexpected errors
     return NextResponse.json({ error: 'Internal error' }, { status: 200 });
   }

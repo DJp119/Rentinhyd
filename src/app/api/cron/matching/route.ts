@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { generateMatchingSQL, calculateMatchScore, type ScoreBreakdown } from '@/lib/matching';
 import { sendMatchDigestEmail } from '@/lib/email';
 import { generateToken } from '@/lib/tokens';
-import { logger } from '@/lib/observability';
+import { logger, logError } from '@/lib/observability';
 
 export const dynamic = 'force-dynamic';
 
@@ -256,12 +256,12 @@ export async function POST(request: Request) {
         };
       });
 
-      try {
+       try {
         const unsubscribeToken = generateToken();
         await sendMatchDigestEmail(seeker.email, digestItems, unsubscribeToken);
         digestsSent++;
       } catch (emailError) {
-        logger.error('Failed to send match digest', { seekerId, error: emailError });
+        logError('matching.digest_send_failed', emailError, { seekerId });
         errors++;
       }
     }
@@ -275,8 +275,8 @@ export async function POST(request: Request) {
       errors,
       durationMs: Date.now() - startTime,
     });
-  } catch (error) {
-    logger.error('Matching job failed', { error: String(error), durationMs: Date.now() - startTime });
+    } catch (error) {
+    logError('matching.job_failed', error, { endpoint: '/api/cron/matching', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Matching job failed', details: String(error) },
       { status: 500 }

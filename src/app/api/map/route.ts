@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { mapQuerySchema, mapResponseSchema, type MapQuery } from '@/lib/schemas';
 import { logger } from '@/lib/observability';
 import { parseBbox, isValidBbox } from '@/lib/utils';
+import { logError } from '@/lib/observability';
 
 
 export async function GET(request: NextRequest) {
@@ -164,7 +165,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    requestLogger.error('map.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('map.error', error, { endpoint: '/api/map', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

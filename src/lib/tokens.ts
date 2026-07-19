@@ -120,7 +120,13 @@ export async function generateIdempotencyKey(prefix: string, identifier: string)
  * Hash IP address for abuse tracking (with salt from env) (Edge compatible)
  */
 export async function hashIpFingerprint(ip: string): Promise<string> {
-  const salt = process.env.IP_FINGERPRINT_SALT || 'default-salt-change-in-production';
+  const salt = process.env.IP_FINGERPRINT_SALT;
+  if (!salt) {
+    throw new Error('IP_FINGERPRINT_SALT environment variable is required');
+  }
+  if (salt.length < 32) {
+    throw new Error('IP_FINGERPRINT_SALT must be at least 32 characters');
+  }
   const encoder = new TextEncoder();
   const data = encoder.encode(`${salt}:${ip}`);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);

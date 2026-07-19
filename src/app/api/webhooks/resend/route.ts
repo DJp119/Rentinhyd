@@ -51,8 +51,17 @@ export async function POST(request: NextRequest) {
       durationMs: Date.now() - startTime,
     });
 
-    // Always return 200 to prevent retries for our processing errors
-    // Resend will retry on non-2xx
+    // Return 200 only for successful processing
+    // Return 401 for invalid signature, 500 for internal errors
+    if (!result.success && result.error === 'invalid_signature') {
+      return NextResponse.json({
+        success: result.success,
+        processed: result.processed,
+        action: result.action,
+        error: result.error,
+      }, { status: 401 });
+    }
+
     return NextResponse.json({
       success: result.success,
       processed: result.processed,
@@ -60,7 +69,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logError('webhook.error', error, { endpoint: '/api/webhooks/resend', durationMs: Date.now() - startTime });
-    // Return 200 to avoid retries for unexpected errors
-    return NextResponse.json({ error: 'Internal error' }, { status: 200 });
+    // Return 500 for actual errors so Resend can retry
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

@@ -8,7 +8,6 @@ import { logger } from '@/lib/observability';
 import { parseBbox, isValidBbox } from '@/lib/utils';
 import { getLocalityStats, getCityStats, getViewportStats } from '@/lib/aggregates';
 
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();

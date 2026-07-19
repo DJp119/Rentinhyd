@@ -10,7 +10,6 @@ import { sendIntroductionEmail } from '@/lib/email';
 import { logAuditEvent } from '@/lib/supabase';
 import { generateActionPair } from '@/lib/tokens';
 
-export const runtime = 'edge';
 
 export async function POST(
   request: NextRequest,

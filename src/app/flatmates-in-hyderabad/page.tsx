@@ -7,7 +7,6 @@ import { formatINR } from '@/lib/utils';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export const metadata: Metadata = {
   title: 'Flatmates in Hyderabad | Find Roommates | Zero Brokerage | hyderabad.rent',

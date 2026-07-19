@@ -10,7 +10,6 @@ import { applyPrivacyJitter, getLocalityFromPoint, generateRequestFingerprint } 
 import { logAuditEvent } from '@/lib/supabase';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

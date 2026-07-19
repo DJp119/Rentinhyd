@@ -9,7 +9,6 @@ import { hashToken, verifyToken } from '@/lib/tokens';
 import { sendListingApprovedEmail, sendSeekerVerificationEmail } from '@/lib/email';
 import { logAuditEvent } from '@/lib/supabase';
 
-export const runtime = 'edge';
 
 export async function POST(
   request: NextRequest,

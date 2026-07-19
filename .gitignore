@@ -106,3 +106,5 @@ graphify-out/cache/ast/v0.9.15/14c211cd45f7949aa3b68dc82fabc34aad6084fd280bef11a
 /graphify-out/cache/ast
 /graphify-out/cache
 *.json
+graphify-out/.graphify_ast.json
+/graphify-out

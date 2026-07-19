@@ -301,7 +301,16 @@ export function MapComponent({
       const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
       const response = await fetch(`/api/map?bbox=${bbox}&zoom=${Math.round(zoom)}&type=all`);
 
-      if (!response.ok) throw new Error('Failed to load map data');
+      if (!response.ok) {
+        let detail = '';
+        try {
+          const body = await response.json();
+          detail = body?.error ? `: ${body.error}` : ` (HTTP ${response.status})`;
+        } catch {
+          detail = ` (HTTP ${response.status})`;
+        }
+        throw new Error(`Failed to load map data${detail}`);
+      }
 
       const data = await response.json();
       const newPins = data.items || [];

@@ -61,7 +61,7 @@ BEGIN
             GROUP BY
                 floor(ST_Y(geom::geometry) / %L) * %L,
                 floor(ST_X(geom::geometry) / %L) * %L
-        $q$, grid_size, grid_size, grid_size, grid_size)
+        $q$, grid_size, grid_size, grid_size, grid_size, grid_size, grid_size, grid_size, grid_size)
         USING status_filter, min_lon, max_lon, min_lat, max_lat;
     ELSE
         RETURN QUERY EXECUTE $q$

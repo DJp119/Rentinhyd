@@ -1,0 +1,1 @@
+{"nodes": [{"id": ".agents_skills_teach_RESOURCES-FORMAT", "type": "template", "label": "Resources Format", "properties": {"description": "Curated set of trusted knowledge sources and community wisdom, grouped by Knowledge/Wisdom with annotated entries"}, "source_file": ".agents/skills/teach/RESOURCES-FORMAT.md", "confidence_score": 1.0}], "edges": [], "hyperedges": []}

@@ -1,0 +1,1 @@
+{"nodes": [{"id": ".claude_skills_graphify_references_hooks", "label": "graphify hooks", "type": "reference", "description": "Post-commit hook to auto-rebuild graph and native CLAUDE.md integration", "source_file": ".claude/skills/graphify/references/hooks.md", "file_type": "markdown", "confidence_score": 1.0}], "edges": [], "hyperedges": []}

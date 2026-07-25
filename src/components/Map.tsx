@@ -151,9 +151,12 @@ export function MapComponent({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   // Initialize Google Maps loader
   useEffect(() => {
+    if (mapsLoaded) return;
+
     if (!API_KEY) {
       setError('Google Maps API key not configured');
       return;
@@ -170,7 +173,7 @@ export function MapComponent({
     }).catch((err) => {
       setError(`Failed to load Google Maps: ${err.message}`);
     });
-  }, []);
+  }, [mapsLoaded, loadAttempt]);
 
   // Initialize map
   useEffect(() => {
@@ -422,6 +425,31 @@ export function MapComponent({
           </div>
         </div>
       )}
+<<<<<<< Updated upstream
+=======
+      {error && (
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+          <div className="text-center p-4">
+            <p className="text-error mb-2">Failed to load map</p>
+            <p className="text-textMuted text-sm mb-4">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                const map = mapRef.current;
+                if (map) {
+                  loadPins(map.getBounds(), map.getZoom()!);
+                } else {
+                  setLoadAttempt(a => a + 1);
+                }
+              }}
+              className="btn-primary"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+>>>>>>> Stashed changes
     </div>
   );
 }

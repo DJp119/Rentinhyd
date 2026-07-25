@@ -5,8 +5,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Server-side client with service role (bypasses RLS)
 function getSupabaseServiceClient(): SupabaseClient {
-  const url = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !serviceKey) {
     // Return mock client for build-time
@@ -23,8 +23,8 @@ function getSupabaseServiceClient(): SupabaseClient {
 
 // Client-side / edge client with anon key (respects RLS)
 function getSupabaseAnonClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !anonKey) {
     // Return mock client for build-time
@@ -67,7 +67,8 @@ function createMockClient(): SupabaseClient {
         eq: () => Promise.resolve({ error: null })
       }),
       rpc: () => Promise.resolve({ data: null, error: { code: 'PGRST116', message: 'Mock' } }),
-    })
+    }),
+    rpc: () => Promise.resolve({ data: [], error: null }),
   } as unknown as SupabaseClient;
   return mockClient;
 }

@@ -1,0 +1,1 @@
+{"nodes": [{"id": ".claude_skills_graphify_references_query", "label": "graphify query", "type": "reference", "description": "Graph traversal query, path, and explain using NetworkX with BFS/DFS modes", "source_file": ".claude/skills/graphify/references/query.md", "file_type": "markdown", "confidence_score": 1.0}], "edges": [], "hyperedges": []}

@@ -1,0 +1,1 @@
+{"nodes": [{"id": ".claude_skills_graphify_references_transcribe", "label": "graphify transcribe", "type": "reference", "description": "Whisper-based video and audio transcription for graph ingestion", "source_file": ".claude/skills/graphify/references/transcribe.md", "file_type": "markdown", "confidence_score": 1.0}], "edges": [], "hyperedges": []}

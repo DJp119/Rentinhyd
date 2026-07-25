@@ -1,0 +1,1 @@
+{"nodes": [{"id": ".agents_skills_teach_MISSION-FORMAT", "type": "template", "label": "Mission Format", "properties": {"description": "Documents the concrete real-world reason the user is learning a topic \u2014 grounds all teaching decisions"}, "source_file": ".agents/skills/teach/MISSION-FORMAT.md", "confidence_score": 1.0}], "edges": [], "hyperedges": []}

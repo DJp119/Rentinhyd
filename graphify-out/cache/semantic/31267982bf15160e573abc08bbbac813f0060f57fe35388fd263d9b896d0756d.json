@@ -1,0 +1,1 @@
+{"nodes": [{"id": ".claude_skills_research_SKILL", "name": "Research", "type": "skill", "source_file": ".agents/skills/research/SKILL.md", "properties": {"description": "Investigate question against high-trust primary sources", "focus": "primary sources, official docs, source code, specs"}, "confidence_score": 1.0}], "edges": [], "hyperedges": []}

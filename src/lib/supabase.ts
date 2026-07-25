@@ -66,7 +66,6 @@ function createMockClient(): SupabaseClient {
       delete: () => ({
         eq: () => Promise.resolve({ error: null })
       }),
-      rpc: () => Promise.resolve({ data: null, error: { code: 'PGRST116', message: 'Mock' } }),
     }),
     rpc: () => Promise.resolve({ data: [], error: null }),
   } as unknown as SupabaseClient;

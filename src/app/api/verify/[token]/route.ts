@@ -154,6 +154,7 @@ export async function POST(
       return NextResponse.json(response);
     }
 
+<<<<<<< Updated upstream
     // Try identity verification
     const { data: identity } = await supabase
       .from('identities')

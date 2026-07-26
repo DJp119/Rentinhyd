@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       durationMs: Date.now() - startTime,
     });
 
+<<<<<<< Updated upstream
     // Return 200 only for successful processing
     // Return 401 for invalid signature, 500 for internal errors
     if (!result.success && result.error === 'invalid_signature') {

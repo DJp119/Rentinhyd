@@ -18,6 +18,8 @@ interface MapProps {
   className?: string;
 }
 
+// Hyderabad city bounds (approximate)
+const HYDERABAD_BOUNDS: [number, number, number, number] = [77.8, 17.0, 78.8, 17.8];
 const DEFAULT_CENTER: google.maps.LatLngLiteral = { lat: 17.44, lng: 78.365 };
 const DEFAULT_ZOOM = 11;
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -176,18 +178,27 @@ export function MapComponent({
   useEffect(() => {
     if (!mapContainer.current || mapRef.current || !mapsLoaded) return;
 
+    const bounds = initialBounds || HYDERABAD_BOUNDS;
+
     const map = new google.maps.Map(mapContainer.current, {
       center: DEFAULT_CENTER,
       zoom: initialZoom,
+<<<<<<< Updated upstream
       restriction: initialBounds ? {
+=======
+      // AdvancedMarkerElement requires a mapId; inline `styles` are ignored when one is set,
+      // so dark styling must be configured on the Map ID in Google Cloud console
+      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
+      restriction: {
+>>>>>>> Stashed changes
         latLngBounds: {
-          north: initialBounds[3],
-          south: initialBounds[1],
-          east: initialBounds[2],
-          west: initialBounds[0],
+          north: bounds[3],
+          south: bounds[1],
+          east: bounds[2],
+          west: bounds[0],
         },
-        strictBounds: false,
-      } : undefined,
+        strictBounds: true,
+      },
       mapTypeControl: true,
       mapTypeControlOptions: {
         mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain'],

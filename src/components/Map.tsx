@@ -22,83 +22,6 @@ const DEFAULT_CENTER: google.maps.LatLngLiteral = { lat: 17.44, lng: 78.365 };
 const DEFAULT_ZOOM = 11;
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
-// Custom map style to match dark theme
-const DARK_MAP_STYLE: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ color: '#0D0D0D' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0D0D0D' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
-  {
-    featureType: 'administrative.locality',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#F5F5F0' }],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#746855' }],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'geometry',
-    stylers: [{ color: '#1a1a1a' }],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#4a7c2e' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'geometry',
-    stylers: [{ color: '#2a2a2a' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'geometry.stroke',
-    stylers: [{ color: '#1a1a1a' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#8a8a8a' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [{ color: '#3a3a3a' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry.stroke',
-    stylers: [{ color: '#1a1a1a' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#b0b0b0' }],
-  },
-  {
-    featureType: 'transit',
-    elementType: 'geometry',
-    stylers: [{ color: '#2a2a2a' }],
-  },
-  {
-    featureType: 'transit.station',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#b0b0b0' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [{ color: '#0a1a2a' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#4a6a8a' }],
-  },
-];
-
 type PinType = MapPin['type'];
 
 function createPinSVG(type: PinType, rent?: number, rentMin?: number, rentMax?: number, listingType?: string, pinCount?: number): string {
@@ -179,6 +102,9 @@ export function MapComponent({
     const map = new google.maps.Map(mapContainer.current, {
       center: DEFAULT_CENTER,
       zoom: initialZoom,
+      // AdvancedMarkerElement requires a mapId; inline `styles` are ignored when one is set,
+      // so dark styling must be configured on the Map ID in Google Cloud console
+      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
       restriction: initialBounds ? {
         latLngBounds: {
           north: initialBounds[3],
@@ -200,7 +126,6 @@ export function MapComponent({
         position: google.maps.ControlPosition.RIGHT_CENTER,
       },
       scaleControl: true,
-      styles: DARK_MAP_STYLE,
       backgroundColor: '#0D0D0D',
       gestureHandling: 'cooperative',
     });
@@ -243,12 +168,9 @@ export function MapComponent({
       createClusterer();
     }
 
-    // Load initial pins
-    loadPins(map.getBounds()!, map.getZoom()!);
-
-    // Map event listeners
+    // Bounds are undefined until the first 'idle' event, which also handles the initial load
     const idleListener = map.addListener('idle', () => {
-      loadPins(map.getBounds()!, map.getZoom()!);
+      loadPins(map.getBounds(), map.getZoom()!);
     });
 
     // Handle zoom changes - enable/disable clustering
@@ -262,14 +184,14 @@ export function MapComponent({
         // Re-render all markers individually
         const mapRef2 = mapRef.current;
         if (mapRef2) {
-          loadPins(mapRef2.getBounds()!, zoom);
+          loadPins(mapRef2.getBounds(), zoom);
         }
       } else if (zoom < 13 && !clusterer) {
         // Enable clustering at low zoom
         createClusterer();
         const mapRef2 = mapRef.current;
         if (mapRef2) {
-          loadPins(mapRef2.getBounds()!, zoom);
+          loadPins(mapRef2.getBounds(), zoom);
         }
       }
     });
@@ -289,8 +211,8 @@ export function MapComponent({
   }, [mapsLoaded, onPinClick]);
 
   // Load pins for current viewport
-  const loadPins = useCallback(async (bounds: google.maps.LatLngBounds, zoom: number) => {
-    if (!mapRef.current) return;
+  const loadPins = useCallback(async (bounds: google.maps.LatLngBounds | undefined, zoom: number) => {
+    if (!mapRef.current || !bounds) return;
 
     setLoading(true);
     setError(null);
@@ -388,42 +310,21 @@ export function MapComponent({
     return div;
   };
 
-  if (error) {
-    return (
-      <div className={`w-full h-full flex items-center justify-center ${className}`}>
-        <div className="text-center p-4">
-          <p className="text-error mb-2">Failed to load map</p>
-          <button
-            onClick={() => mapRef.current && loadPins(mapRef.current.getBounds()!, mapRef.current.getZoom()!)}
-            className="btn-primary"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!mapsLoaded) {
-    return (
-      <div className={`w-full h-full ${className}`} style={{ minHeight: '400px' }}>
+  return (
+    <div
+      className={`relative w-full h-full ${className}`}
+      style={{ minHeight: '400px', backgroundColor: '#0D0D0D' }}
+    >
+      <div ref={mapContainer} className="absolute inset-0" />
+      {!mapsLoaded && !error && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2"></div>
             <p className="text-textMuted text-sm">Loading Google Maps...</p>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={mapContainer}
-      className={`w-full h-full ${className}`}
-      style={{ minHeight: '400px', backgroundColor: '#0D0D0D' }}
-    >
-      {loading && (
+      )}
+      {mapsLoaded && loading && !error && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 pointer-events-none">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2"></div>
@@ -431,8 +332,6 @@ export function MapComponent({
           </div>
         </div>
       )}
-<<<<<<< Updated upstream
-=======
       {error && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
           <div className="text-center p-4">
@@ -442,14 +341,7 @@ export function MapComponent({
               onClick={() => {
                 setError(null);
                 const map = mapRef.current;
-                if (map) {
-                  const bounds = map.getBounds();
-                  if (bounds) {
-                    loadPins(bounds, map.getZoom()!);
-                  }
-                } else {
-                  setLoadAttempt(a => a + 1);
-                }
+                if (map) loadPins(map.getBounds(), map.getZoom()!);
               }}
               className="btn-primary"
             >
@@ -458,7 +350,6 @@ export function MapComponent({
           </div>
         </div>
       )}
->>>>>>> Stashed changes
     </div>
   );
 }

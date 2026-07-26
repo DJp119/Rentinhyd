@@ -151,6 +151,7 @@ export function MapComponent({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   // Initialize Google Maps loader
   useEffect(() => {
@@ -431,8 +432,6 @@ export function MapComponent({
           </div>
         </div>
       )}
-<<<<<<< Updated upstream
-=======
       {error && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
           <div className="text-center p-4">
@@ -458,7 +457,6 @@ export function MapComponent({
           </div>
         </div>
       )}
->>>>>>> Stashed changes
     </div>
   );
 }

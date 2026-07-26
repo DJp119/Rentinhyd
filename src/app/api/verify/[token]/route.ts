@@ -154,6 +154,7 @@ export async function POST(
       return NextResponse.json(response);
     }
 
+<<<<<<< Updated upstream
     // Try identity verification
     const { data: identity } = await supabase
       .from('identities')
@@ -161,31 +162,53 @@ export async function POST(
       .eq('email', (
         await supabase.from('verification_tokens').select('token_hash').eq('token_hash', tokenHash).eq('resource_type', 'identity').single()
       ).data?.token_hash || '')
+=======
+    // Try identity verification (from verification_tokens table)
+    const { data: identityToken } = await supabase
+      .from('verification_tokens')
+      .select('resource_id')
+      .eq('token_hash', tokenHash)
+      .eq('resource_type', 'identity')
+>>>>>>> Stashed changes
       .single();
 
-    if (identity) {
-      await supabase
+    if (identityToken) {
+      const { data: identity } = await supabase
         .from('identities')
-        .update({ email_verified: true, email_verified_at: new Date().toISOString() })
-        .eq('id', identity.id);
+        .select('id, email')
+        .eq('id', identityToken.resource_id)
+        .single();
 
-      await logAuditEvent({
-        event_type: 'identity_verified',
-        actor_type: 'user',
-        actor_id: identity.id,
-        target_type: 'identity',
-        target_id: identity.id,
-        payload: { method: 'email_token' },
-      });
+      if (identity) {
+        await supabase
+          .from('identities')
+          .update({ email_verified: true, email_verified_at: new Date().toISOString() })
+          .eq('id', identity.id);
 
-      const response = verifyResponseSchema.parse({
-        success: true,
-        message: 'Email verified successfully!',
-        resourceId: identity.id,
-        resourceType: 'identity',
-      });
+        // Mark token as consumed
+        await supabase
+          .from('verification_tokens')
+          .update({ consumed_at: new Date().toISOString() })
+          .eq('token_hash', tokenHash);
 
-      return NextResponse.json(response);
+        await logAuditEvent({
+          event_type: 'identity_verified',
+          actor_type: 'user',
+          actor_id: identity.id,
+          target_type: 'identity',
+          target_id: identity.id,
+          payload: { method: 'email_token' },
+        });
+
+        const response = verifyResponseSchema.parse({
+          success: true,
+          message: 'Email verified successfully!',
+          resourceId: identity.id,
+          resourceType: 'identity',
+        });
+
+        return NextResponse.json(response);
+      }
     }
 
     // Token not found or invalid

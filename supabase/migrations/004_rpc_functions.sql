@@ -42,9 +42,9 @@ BEGIN
         RETURN QUERY EXECUTE format($q$
             SELECT
                 md5(concat(
-                    floor(ST_Y(geom::geometry) / %L) * %L,
+                    floor(ST_Y(geom::geometry) / %1$L) * %1$L,
                     '_',
-                    floor(ST_X(geom::geometry) / %L) * %L
+                    floor(ST_X(geom::geometry) / %1$L) * %1$L
                 ))::uuid as id,
                 (ST_Y(ST_Centroid(ST_Collect(geom::geometry)))::double precision) as lat,
                 (ST_X(ST_Centroid(ST_Collect(geom::geometry)))::double precision) as lon,
@@ -59,9 +59,9 @@ BEGIN
               AND ST_X(geom::geometry) BETWEEN $2 AND $3
               AND ST_Y(geom::geometry) BETWEEN $4 AND $5
             GROUP BY
-                floor(ST_Y(geom::geometry) / %L) * %L,
-                floor(ST_X(geom::geometry) / %L) * %L
-        $q$, grid_size, grid_size, grid_size, grid_size)
+                floor(ST_Y(geom::geometry) / %1$L) * %1$L,
+                floor(ST_X(geom::geometry) / %1$L) * %1$L
+        $q$, grid_size)
         USING status_filter, min_lon, max_lon, min_lat, max_lat;
     ELSE
         RETURN QUERY EXECUTE $q$

@@ -4,6 +4,19 @@
 import { Resend } from 'resend';
 import { generateVerificationPair, generateActionPair } from './tokens';
 
+// ============================================
+// Security: HTML escaping for user-controlled data
+// ============================================
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&#039;');
+}
+
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -243,7 +256,16 @@ export async function sendIntroductionEmail(
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
   const withdrawalUrl = `${APP_URL}/withdraw?token=${withdrawalToken}`;
 
+  const safeName = escapeHtml(contactInfo.name);
+  const safePhone = contactInfo.phone ? escapeHtml(contactInfo.phone) : '';
+  const safeEmail = contactInfo.email ? escapeHtml(contactInfo.email) : '';
+  const safePreferredMethod = escapeHtml(contactInfo.preferredMethod);
+  const safeContactWindow = contactInfo.contactWindow ? escapeHtml(contactInfo.contactWindow) : '';
+  const safeListingTitle = escapeHtml(matchContext.listingTitle);
+  const safeLocality = escapeHtml(matchContext.locality);
+
   const contactHtml = `
+<<<<<<< Updated upstream
     <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#F5F5F0;"><strong>Contact:</strong> ${escapeHtml(contactInfo.name)}</p>
     ${contactInfo.phone ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">📞 ${escapeHtml(contactInfo.phone)}</p>` : ''}
     ${contactInfo.email ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">✉️ ${escapeHtml(contactInfo.email)}</p>` : ''}
@@ -252,6 +274,16 @@ export async function sendIntroductionEmail(
 
   const html = getEmailWrapper(`
     <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Introduction: ${escapeHtml(matchContext.listingTitle)}</h1>
+=======
+    <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#F5F5F0;"><strong>Contact:</strong> ${safeName}</p>
+    ${contactInfo.phone ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">📞 ${safePhone}</p>` : ''}
+    ${contactInfo.email ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">✉️ ${safeEmail}</p>` : ''}
+    <p style="margin:8px 0 0;font-size:13px;color:#888880;">Preferred: ${safePreferredMethod}${safeContactWindow ? ` (${safeContactWindow})` : ''}</p>
+  `;
+
+  const html = getEmailWrapper(`
+    <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Introduction: ${safeListingTitle}</h1>
+>>>>>>> Stashed changes
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
       Both parties have accepted the match. Here are the contact details:
     </p>
@@ -265,7 +297,11 @@ export async function sendIntroductionEmail(
     <p style="margin:24px 0 0;font-size:14px;color:#888880;">
       <a href="${withdrawalUrl}" style="color:#EF5350;text-decoration:underline;">Withdraw from this introduction</a>
     </p>
+<<<<<<< Updated upstream
   `, `You're connected: ${escapeHtml(matchContext.listingTitle)} in ${escapeHtml(matchContext.locality)}`);
+=======
+  `, `You're connected: ${safeListingTitle} in ${safeLocality}`);
+>>>>>>> Stashed changes
 
   try {
     const result = await getResendClient().emails.send({
@@ -289,13 +325,22 @@ export async function sendListingApprovedEmail(
   listingTitle: string,
   listingUrl: string
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  const safeTitle = escapeHtml(listingTitle);
+
   const html = getEmailWrapper(`
     <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#4CAF50;">Listing approved</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
+<<<<<<< Updated upstream
       Your listing <strong>"${escapeHtml(listingTitle)}"</strong> has been approved and is now visible to seekers.
     </p>
     ${getButton(listingUrl, 'View Listing')}
   `, `Your listing "${escapeHtml(listingTitle)}" is live`);
+=======
+      Your listing <strong>"${safeTitle}"</strong> has been approved and is now visible to seekers.
+    </p>
+    ${getButton(listingUrl, 'View Listing')}
+  `, `Your listing "${safeTitle}" is live`);
+>>>>>>> Stashed changes
 
   try {
     const result = await getResendClient().emails.send({
@@ -314,15 +359,25 @@ export async function sendListingRentedEmail(
   email: string,
   listingTitle: string
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  const safeTitle = escapeHtml(listingTitle);
+
   const html = getEmailWrapper(`
     <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Listing marked as rented</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
+<<<<<<< Updated upstream
       Your listing <strong>"${escapeHtml(listingTitle)}"</strong> has been marked as rented and is no longer visible to seekers.
+=======
+      Your listing <strong>"${safeTitle}"</strong> has been marked as rented and is no longer visible to seekers.
+>>>>>>> Stashed changes
     </p>
     <p style="margin:0;font-size:14px;color:#888880;">
       You can relist it anytime from your dashboard.
     </p>
+<<<<<<< Updated upstream
   `, `Your listing "${escapeHtml(listingTitle)}" is now rented`);
+=======
+  `, `Your listing "${safeTitle}" is now rented`);
+>>>>>>> Stashed changes
 
   try {
     const result = await getResendClient().emails.send({

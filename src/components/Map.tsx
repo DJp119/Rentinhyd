@@ -431,6 +431,34 @@ export function MapComponent({
           </div>
         </div>
       )}
+<<<<<<< Updated upstream
+=======
+      {error && (
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+          <div className="text-center p-4">
+            <p className="text-error mb-2">Failed to load map</p>
+            <p className="text-textMuted text-sm mb-4">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                const map = mapRef.current;
+                if (map) {
+                  const bounds = map.getBounds();
+                  if (bounds) {
+                    loadPins(bounds, map.getZoom()!);
+                  }
+                } else {
+                  setLoadAttempt(a => a + 1);
+                }
+              }}
+              className="btn-primary"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+>>>>>>> Stashed changes
     </div>
   );
 }

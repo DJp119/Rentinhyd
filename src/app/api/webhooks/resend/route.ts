@@ -71,5 +71,19 @@ export async function POST(request: NextRequest) {
     logError('webhook.error', error, { endpoint: '/api/webhooks/resend', durationMs: Date.now() - startTime });
     // Return 500 for actual errors so Resend can retry
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+=======
+    // Return appropriate status codes
+    if (!result.success) {
+      // Invalid signature or other auth failures
+      return NextResponse.json(result, { status: 401 });
+    }
+
+    // Success (including duplicate/queued for review)
+    return NextResponse.json(result);
+  } catch (error) {
+    requestLogger.error('webhook.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    // Return 500 for unexpected server errors (Resend will retry)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+>>>>>>> Stashed changes
   }
 }

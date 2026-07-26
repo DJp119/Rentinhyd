@@ -64,8 +64,11 @@ export async function GET(request: NextRequest) {
       });
 
     if (pinsError) {
-      requestLogger.error('map.pins_query_failed', { error: pinsError.message });
-      throw pinsError;
+      requestLogger.error('map.pins_query_failed', { error: pinsError.message, details: pinsError.details });
+      return NextResponse.json(
+        { error: `Pins query failed: ${pinsError.message || JSON.stringify(pinsError)}` },
+        { status: 500 }
+      );
     }
 
     // Query listings (approved only)
@@ -80,8 +83,11 @@ export async function GET(request: NextRequest) {
       });
 
     if (listingsError) {
-      requestLogger.error('map.listings_query_failed', { error: listingsError.message });
-      throw listingsError;
+      requestLogger.error('map.listings_query_failed', { error: listingsError.message, details: listingsError.details });
+      return NextResponse.json(
+        { error: `Listings query failed: ${listingsError.message || JSON.stringify(listingsError)}` },
+        { status: 500 }
+      );
     }
 
     // Apply filters
@@ -164,9 +170,9 @@ export async function GET(request: NextRequest) {
         'X-Response-Time': `${Date.now() - startTime}ms`,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     logError('map.error', error, { endpoint: '/api/map', durationMs: Date.now() - startTime });
-    const message = error instanceof Error ? error.message : 'Internal server error';
+    const message = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
     return NextResponse.json(
       { error: `Internal server error: ${message}` },
       { status: 500 }

@@ -74,6 +74,7 @@ export function MapComponent({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   // Initialize Google Maps loader
   useEffect(() => {

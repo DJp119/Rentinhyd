@@ -154,22 +154,12 @@ export async function POST(
       return NextResponse.json(response);
     }
 
-<<<<<<< Updated upstream
-    // Try identity verification
-    const { data: identity } = await supabase
-      .from('identities')
-      .select('id, email')
-      .eq('email', (
-        await supabase.from('verification_tokens').select('token_hash').eq('token_hash', tokenHash).eq('resource_type', 'identity').single()
-      ).data?.token_hash || '')
-=======
-    // Try identity verification (from verification_tokens table)
+// Try identity verification (from verification_tokens table)
     const { data: identityToken } = await supabase
       .from('verification_tokens')
       .select('resource_id')
       .eq('token_hash', tokenHash)
       .eq('resource_type', 'identity')
->>>>>>> Stashed changes
       .single();
 
     if (identityToken) {

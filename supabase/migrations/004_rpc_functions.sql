@@ -55,7 +55,7 @@ BEGIN
                 MODE() WITHIN GROUP (ORDER BY locality) as locality,
                 COUNT(*) as pin_count
             FROM rent_pins
-            WHERE status = $1
+            WHERE status::text = $1
               AND ST_X(geom::geometry) BETWEEN $2 AND $3
               AND ST_Y(geom::geometry) BETWEEN $4 AND $5
             GROUP BY
@@ -76,7 +76,7 @@ BEGIN
                 locality,
                 1 as pin_count
             FROM rent_pins
-            WHERE status = $1
+            WHERE status::text = $1
               AND ST_X(geom::geometry) BETWEEN $2 AND $3
               AND ST_Y(geom::geometry) BETWEEN $4 AND $5
             LIMIT 500
@@ -113,7 +113,7 @@ BEGIN
     RETURN QUERY EXECUTE format($q$
         SELECT
             id,
-            listing_type,
+            listing_type::text,
             title,
             locality,
             ST_X(geom::geometry)::double precision as lon,
@@ -122,12 +122,12 @@ BEGIN
             bhk,
             furnishing
         FROM listings
-        WHERE status = $1
+        WHERE status::text = $1
           %s
           AND ST_X(geom::geometry) BETWEEN $2 AND $3
           AND ST_Y(geom::geometry) BETWEEN $4 AND $5
         LIMIT 200
-    $q$, CASE WHEN listing_type_filter IS NOT NULL THEN 'AND listing_type = $6' ELSE '' END)
+    $q$, CASE WHEN listing_type_filter IS NOT NULL THEN 'AND listing_type::text = $6' ELSE '' END)
     USING
         CASE WHEN listing_type_filter IS NOT NULL THEN
             ARRAY[status_filter, min_lon, max_lon, min_lat, max_lat, listing_type_filter]

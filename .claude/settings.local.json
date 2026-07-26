@@ -11,7 +11,10 @@
       "Bash(npm run *)",
       "Bash(git commit -m 'feat: add E2E test setup with Playwright and cron triggers *)",
       "Bash(npx vitest *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "Bash(git push *)",
+      "Bash(git pull *)"
     ]
   }
 }

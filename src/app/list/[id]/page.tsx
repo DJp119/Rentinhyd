@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { formatINR, formatRentRange } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 interface ListingPageProps {
   params: Promise<{ id: string }>;
 }

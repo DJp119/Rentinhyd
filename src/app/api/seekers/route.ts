@@ -8,12 +8,12 @@ import { logger } from '@/lib/observability';
 import { verifyTurnstileToken } from '@/lib/security';
 import { generateRequestFingerprint } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
+import { logError } from '@/lib/observability';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
 import { hashEmail } from '@/lib/security';
 import { generateVerificationPair } from '@/lib/tokens';
 import { sendSeekerVerificationEmail } from '@/lib/email';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -145,23 +145,20 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Store verification token (could be in a separate verification table)
-    // For simplicity, we'll use the seeker's metadata or a verification table
-    // Here we use a simplified approach - store in email_events
-    await supabase
-      .from('email_events')
+    // Store verification token in verification_tokens table
+    const { error: tokenError } = await supabase
+      .from('verification_tokens')
       .insert({
-        direction: 'outbound',
-        resend_id: `verify_${seeker.id}`,
-        to_email: emailLower,
-        subject: 'Verify your search - hyderabad.rent',
-        body_hash: verificationHash,
-        email_type: 'verification',
-        status: 'sent',
-        related_type: 'seeker',
-        related_id: seeker.id,
-        idempotency_key: `verify_seeker_${seeker.id}`,
+        token_hash: verificationHash,
+        resource_type: 'seeker',
+        resource_id: seeker.id,
+        expires_at: expiresAt.toISOString(),
       });
+
+    if (tokenError) {
+      requestLogger.error('seekers.verification_token_insert_failed', { error: tokenError });
+      throw tokenError;
+    }
 
     // Send verification email
     await sendSeekerVerificationEmail(emailLower, verificationToken, seeker.id);
@@ -181,7 +178,6 @@ export async function POST(request: NextRequest) {
     const response = seekerResponseSchema.parse({
       id: seeker.id,
       status: 'pending',
-      verificationToken,
       message: 'Search submitted. Please verify your email to activate it.',
     });
 
@@ -189,7 +185,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    requestLogger.error('seekers.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('seekers.error', error, { endpoint: '/api/seekers', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

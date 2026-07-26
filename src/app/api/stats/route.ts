@@ -7,8 +7,8 @@ import { statsQuerySchema, localityStatsSchema, cityStatsSchema, viewportStatsSc
 import { logger } from '@/lib/observability';
 import { parseBbox, isValidBbox } from '@/lib/utils';
 import { getLocalityStats, getCityStats, getViewportStats } from '@/lib/aggregates';
+import { logError } from '@/lib/observability';
 
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    requestLogger.error('stats.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('stats.error', error, { endpoint: '/api/stats', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

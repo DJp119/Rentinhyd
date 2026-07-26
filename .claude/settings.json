@@ -20,5 +20,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "cloudflare@cloudflare": true
   }
 }

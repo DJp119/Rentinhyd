@@ -8,8 +8,8 @@ import { logger } from '@/lib/observability';
 import { hashToken, verifyToken } from '@/lib/tokens';
 import { sendListingApprovedEmail, sendSeekerVerificationEmail } from '@/lib/email';
 import { logAuditEvent } from '@/lib/supabase';
+import { logError } from '@/lib/observability';
 
-export const runtime = 'edge';
 
 export async function POST(
   request: NextRequest,
@@ -97,79 +97,108 @@ export async function POST(
       return NextResponse.json(response);
     }
 
-    // Try seeker verification (stored in email_events)
-    const { data: emailEvent } = await supabase
-      .from('email_events')
-      .select('related_id, to_email')
-      .eq('body_hash', tokenHash)
-      .eq('email_type', 'verification')
+    // Try seeker verification (stored in verification_tokens table)
+    const { data: verificationToken } = await supabase
+      .from('verification_tokens')
+      .select('resource_id, expires_at, consumed_at')
+      .eq('token_hash', tokenHash)
+      .eq('resource_type', 'seeker')
       .single();
 
-    if (emailEvent) {
+    if (verificationToken) {
+      // Check if token is expired
+      if (new Date(verificationToken.expires_at) < new Date()) {
+        return NextResponse.json(
+          { success: false, message: 'Verification token has expired' },
+          { status: 400 }
+        );
+      }
+
+      // Check if token already consumed
+      if (verificationToken.consumed_at) {
+        return NextResponse.json(
+          { success: false, message: 'Verification token already used' },
+          { status: 400 }
+        );
+      }
+
       // Verify seeker
       const { error } = await supabase
         .from('seek_requests')
         .update({ status: 'approved', approved_at: new Date().toISOString() })
-        .eq('id', emailEvent.related_id);
+        .eq('id', verificationToken.resource_id);
 
       if (error) throw error;
 
-      // Mark email event as processed
+      // Mark token as consumed
       await supabase
-        .from('email_events')
-        .update({ status: 'processed', processed_at: new Date().toISOString() })
-        .eq('id', emailEvent.related_id);
+        .from('verification_tokens')
+        .update({ consumed_at: new Date().toISOString() })
+        .eq('token_hash', tokenHash);
 
       await logAuditEvent({
         event_type: 'seeker_verified',
         actor_type: 'user',
         target_type: 'seeker',
-        target_id: emailEvent.related_id,
+        target_id: verificationToken.resource_id,
         payload: { method: 'email_token' },
       });
 
       const response = verifyResponseSchema.parse({
         success: true,
         message: 'Search verified and activated!',
-        resourceId: emailEvent.related_id,
+        resourceId: verificationToken.resource_id,
         resourceType: 'seeker',
       });
 
       return NextResponse.json(response);
     }
 
-    // Try identity verification
-    const { data: identity } = await supabase
-      .from('identities')
-      .select('id, email')
-      .eq('email', (
-        await supabase.from('email_events').select('to_email').eq('body_hash', tokenHash).single()
-      ).data?.to_email || '')
+// Try identity verification (from verification_tokens table)
+    const { data: identityToken } = await supabase
+      .from('verification_tokens')
+      .select('resource_id')
+      .eq('token_hash', tokenHash)
+      .eq('resource_type', 'identity')
       .single();
 
-    if (identity) {
-      await supabase
+    if (identityToken) {
+      const { data: identity } = await supabase
         .from('identities')
-        .update({ email_verified: true, email_verified_at: new Date().toISOString() })
-        .eq('id', identity.id);
+        .select('id, email')
+        .eq('id', identityToken.resource_id)
+        .single();
 
-      await logAuditEvent({
-        event_type: 'identity_verified',
-        actor_type: 'user',
-        actor_id: identity.id,
-        target_type: 'identity',
-        target_id: identity.id,
-        payload: { method: 'email_token' },
-      });
+      if (identity) {
+        await supabase
+          .from('identities')
+          .update({ email_verified: true, email_verified_at: new Date().toISOString() })
+          .eq('id', identity.id);
 
-      const response = verifyResponseSchema.parse({
-        success: true,
-        message: 'Email verified successfully!',
-        resourceId: identity.id,
-        resourceType: 'identity',
-      });
+        // Mark token as consumed
+        await supabase
+          .from('verification_tokens')
+          .update({ consumed_at: new Date().toISOString() })
+          .eq('token_hash', tokenHash);
 
-      return NextResponse.json(response);
+        await logAuditEvent({
+          event_type: 'identity_verified',
+          actor_type: 'user',
+          actor_id: identity.id,
+          target_type: 'identity',
+          target_id: identity.id,
+          payload: { method: 'email_token' },
+        });
+
+        const response = verifyResponseSchema.parse({
+          success: true,
+          message: 'Email verified successfully!',
+          resourceId: identity.id,
+          resourceType: 'identity',
+        });
+
+        return NextResponse.json(response);
+      }
     }
 
     // Token not found or invalid
@@ -178,7 +207,7 @@ export async function POST(
       { status: 404 }
     );
   } catch (error) {
-    requestLogger.error('verify.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('verify.error', error, { endpoint: '/api/verify', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

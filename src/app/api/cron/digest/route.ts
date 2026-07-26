@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { sendDailyDigestEmail } from '@/lib/email';
-import { logger } from '@/lib/observability';
+import { logger, logError } from '@/lib/observability';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -120,7 +119,7 @@ export async function POST(request: Request) {
           .eq('id', seeker.id);
 
       } catch (seekerError) {
-        logger.error('Failed to send digest for seeker', { seekerId: seeker.id, error: String(seekerError) });
+        logError('digest.seeker_failed', seekerError, { seekerId: seeker.id });
         errors++;
       }
     }
@@ -134,7 +133,7 @@ export async function POST(request: Request) {
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
-    logger.error('Daily digest job failed', { error: String(error), durationMs: Date.now() - startTime });
+    logError('digest.job_failed', error, { endpoint: '/api/cron/digest', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Daily digest job failed', details: String(error) },
       { status: 500 }

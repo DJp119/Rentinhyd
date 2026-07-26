@@ -7,13 +7,6 @@
 
 export const CSP_DIRECTIVES = {
   'default-src': ["'self'"],
-<<<<<<< Updated upstream
-  'script-src': ["'self'", "'unsafe-inline'", 'https://challenges.cloudflare.com'],
-  'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-  'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
-  'img-src': ["'self'", 'data:', 'https:', 'blob:'],
-  'connect-src': ["'self'", 'https://*.supabase.co', 'https://api.resend.com', 'https://challenges.cloudflare.com'],
-=======
   'script-src': [
     "'self'",
     "'unsafe-inline'",
@@ -44,7 +37,6 @@ export const CSP_DIRECTIVES = {
     'blob:',
   ],
   'worker-src': ["'self'", 'blob:'],
->>>>>>> Stashed changes
   'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
   'object-src': ["'none'"],
   'base-uri': ["'self'"],

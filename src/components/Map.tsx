@@ -107,6 +107,7 @@ export function MapComponent({
     const map = new google.maps.Map(mapContainer.current, {
       center: DEFAULT_CENTER,
       zoom: initialZoom,
+      minZoom: 10,
       // AdvancedMarkerElement requires a mapId; inline `styles` are ignored when one is set,
       // so dark styling must be configured on the Map ID in Google Cloud console
       mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',

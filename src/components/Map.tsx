@@ -183,14 +183,10 @@ export function MapComponent({
     const map = new google.maps.Map(mapContainer.current, {
       center: DEFAULT_CENTER,
       zoom: initialZoom,
-<<<<<<< Updated upstream
-      restriction: initialBounds ? {
-=======
       // AdvancedMarkerElement requires a mapId; inline `styles` are ignored when one is set,
       // so dark styling must be configured on the Map ID in Google Cloud console
       mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
       restriction: {
->>>>>>> Stashed changes
         latLngBounds: {
           north: bounds[3],
           south: bounds[1],

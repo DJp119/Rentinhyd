@@ -126,3 +126,25 @@ graphify-out/.graphify_root
 graphify-out/.graphify_root
 graphify-out/cache/stat-index.json
 
+# Added by code-review-graph
+.code-review-graph/
+/.claude/skills/debug-issue
+/.claude/skills/explore-codebase
+/.claude/skills/refactor-safely
+/.claude/skills/review-changes
+/.codebuddy/skills/debug-issue
+/.codebuddy/skills/explore-codebase
+/.codebuddy/skills/refactor-safely
+/.codebuddy/skills/review-changes
+/.gemini/hooks
+/.kiro/steering
+.gemini/skills/debug-issue/SKILL.md
+/.gemini/skills/explore-codebase
+/.gemini/skills
+/.github
+/.gemini
+.cursorrules
+/.claude
+/.claude
+*.json
+.windsurfrules

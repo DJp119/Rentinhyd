@@ -8,8 +8,8 @@ import { logger } from '@/lib/observability';
 import { verifyTurnstileToken, hashEmail } from '@/lib/security';
 import { generateRequestFingerprint } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
+import { logError } from '@/lib/observability';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    requestLogger.error('report.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('report.error', error, { endpoint: '/api/report', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

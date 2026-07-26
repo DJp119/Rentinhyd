@@ -2,7 +2,7 @@
 // Admin moderation utilities
 
 import { supabase } from './supabase';
-import { logger } from './observability';
+import { logger, logError } from './observability';
 import { logAuditEvent } from './supabase';
 
 export type ModerationAction = 'quarantine' | 'approve' | 'ban' | 'delete' | 'warn';

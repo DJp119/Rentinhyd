@@ -2,21 +2,28 @@
 // GET /api/health - Health check endpoint
 
 import { NextResponse } from 'next/server';
-import { runHealthChecks, healthResponseSchema } from '@/lib/observability';
+import { runHealthChecks, healthResponseSchema, logError } from '@/lib/observability';
 
-export const runtime = 'edge';
 
 export async function GET() {
-  const health = await runHealthChecks();
+  try {
+    const health = await runHealthChecks();
 
-  const response = healthResponseSchema.parse({
-    status: health.status,
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
-    checks: health.checks,
-  });
+    const response = healthResponseSchema.parse({
+      status: health.status,
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0',
+      checks: health.checks,
+    });
 
-  const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+    const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
 
-  return NextResponse.json(response, { status: statusCode });
+    return NextResponse.json(response, { status: statusCode });
+  } catch (error) {
+    logError('health.error', error, { endpoint: '/api/health' });
+    return NextResponse.json(
+      { status: 'unhealthy', timestamp: new Date().toISOString(), error: 'Health check failed' },
+      { status: 503 }
+    );
+  }
 }

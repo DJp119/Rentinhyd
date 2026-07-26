@@ -4,9 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resendWebhookSchema } from '@/lib/schemas';
 import { handleResendWebhook } from '@/lib/webhooks';
-import { logger } from '@/lib/observability';
+import { logger, logError } from '@/lib/observability';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -52,16 +51,17 @@ export async function POST(request: NextRequest) {
       durationMs: Date.now() - startTime,
     });
 
-    // Always return 200 to prevent retries for our processing errors
-    // Resend will retry on non-2xx
-    return NextResponse.json({
-      success: result.success,
-      processed: result.processed,
-      action: result.action,
-    });
+// Return appropriate status codes
+    if (!result.success) {
+      // Invalid signature or other auth failures
+      return NextResponse.json(result, { status: 401 });
+    }
+
+    // Success (including duplicate/queued for review)
+    return NextResponse.json(result);
   } catch (error) {
     requestLogger.error('webhook.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
-    // Return 200 to avoid retries for unexpected errors
-    return NextResponse.json({ error: 'Internal error' }, { status: 200 });
+    // Return 500 for unexpected server errors (Resend will retry)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -8,12 +8,12 @@ import { logger } from '@/lib/observability';
 import { verifyTurnstileToken, encrypt } from '@/lib/security';
 import { getLocalityFromPoint, applyPrivacyJitter, generateRequestFingerprint } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
+import { logError } from '@/lib/observability';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
 import { hashEmail } from '@/lib/security';
 import { generateVerificationPair, hashToken } from '@/lib/tokens';
 import { sendListingVerificationEmail } from '@/lib/email';
 
-export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -198,7 +198,6 @@ export async function POST(request: NextRequest) {
     const response = listingResponseSchema.parse({
       id: listing.id,
       status: 'pending',
-      verificationToken, // Only returned once
       message: 'Listing submitted. Please verify your email to publish it.',
     });
 
@@ -206,7 +205,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    requestLogger.error('listings.error', { error: (error as Error).message, durationMs: Date.now() - startTime });
+    logError('listings.error', error, { endpoint: '/api/listings', durationMs: Date.now() - startTime });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

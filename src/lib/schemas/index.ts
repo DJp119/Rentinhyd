@@ -199,7 +199,6 @@ export type ListingSubmit = z.infer<typeof listingSubmitSchema>;
 export const listingResponseSchema = z.object({
   id: uuidSchema,
   status: z.enum(['pending', 'approved']),
-  verificationToken: z.string().optional(), // Only returned once
   message: z.string(),
 });
 
@@ -264,7 +263,6 @@ export type SeekerSubmit = z.infer<typeof seekerSubmitSchema>;
 export const seekerResponseSchema = z.object({
   id: uuidSchema,
   status: z.enum(['pending', 'approved']),
-  verificationToken: z.string().optional(),
   message: z.string(),
 });
 

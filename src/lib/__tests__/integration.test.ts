@@ -3,6 +3,11 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// Set required env vars for lazy-initialized modules
+process.env.RESEND_API_KEY = 'test-api-key';
+process.env.NEXT_PUBLIC_APP_URL = 'https://rentinhyderabad.in';
+process.env.CRON_SECRET = 'test-cron-secret';
+
 // Mock Resend BEFORE importing modules that use it
 vi.mock('resend', () => {
   return {

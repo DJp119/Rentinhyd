@@ -4,10 +4,28 @@
 import { Resend } from 'resend';
 import { generateVerificationPair, generateActionPair } from './tokens';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY not configured');
+  }
+  return new Resend(apiKey);
+}
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@hyderabad.rent';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://hyderabad.rent';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@rentinhyderabad.in';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://rentinhyderabad.in';
+
+/**
+ * Escape HTML special characters to prevent XSS in email templates
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&apos;');
+}
 
 // ============================================
 // Email Templates
@@ -70,7 +88,7 @@ export async function sendIdentityVerificationEmail(
   `, 'Verify your email to access hyderabad.rent');
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Verify your email - hyderabad.rent',
@@ -101,7 +119,7 @@ export async function sendListingVerificationEmail(
   `, 'Verify your email to publish your listing');
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Verify your listing - hyderabad.rent',
@@ -132,7 +150,7 @@ export async function sendSeekerVerificationEmail(
   `, 'Verify your email to activate your search');
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: 'Verify your search - hyderabad.rent',
@@ -173,10 +191,10 @@ export async function sendMatchDigestEmail(
   const matchItemsHtml = matches.map(m => `
     <tr>
       <td style="padding:20px 0;border-bottom:1px solid #2E2E2E;">
-        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${m.listing.title}</h3>
-        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${m.listing.locality} • ${m.listing.bhk} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${escapeHtml(m.listing.title)}</h3>
+        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${escapeHtml(m.listing.locality)} • ${escapeHtml(m.listing.bhk)} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
         <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#E8A838;">${formatINR(m.listing.rent)}/month</p>
-        <p style="margin:0 0 12px;font-size:13px;color:#888880;">Match score: ${m.score}% • Seeker: ${m.seekerProfile.budgetRange} • ${m.seekerProfile.moveInWindow}</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#888880;">Match score: ${m.score}% • Seeker: ${escapeHtml(m.seekerProfile.budgetRange)} • ${escapeHtml(m.seekerProfile.moveInWindow)}</p>
         <a href="${APP_URL}/matches/${m.matchId}?token=${unsubscribeToken}" style="color:#E8A838;text-decoration:none;font-weight:500;">View & Respond →</a>
       </td>
     </tr>
@@ -196,7 +214,7 @@ export async function sendMatchDigestEmail(
   `, `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`,
@@ -225,15 +243,23 @@ export async function sendIntroductionEmail(
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
   const withdrawalUrl = `${APP_URL}/withdraw?token=${withdrawalToken}`;
 
+  const safeName = escapeHtml(contactInfo.name);
+  const safePhone = contactInfo.phone ? escapeHtml(contactInfo.phone) : '';
+  const safeEmail = contactInfo.email ? escapeHtml(contactInfo.email) : '';
+  const safePreferredMethod = escapeHtml(contactInfo.preferredMethod);
+  const safeContactWindow = contactInfo.contactWindow ? escapeHtml(contactInfo.contactWindow) : '';
+  const safeListingTitle = escapeHtml(matchContext.listingTitle);
+  const safeLocality = escapeHtml(matchContext.locality);
+
   const contactHtml = `
-    <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#F5F5F0;"><strong>Contact:</strong> ${contactInfo.name}</p>
-    ${contactInfo.phone ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">📞 ${contactInfo.phone}</p>` : ''}
-    ${contactInfo.email ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">✉️ ${contactInfo.email}</p>` : ''}
-    <p style="margin:8px 0 0;font-size:13px;color:#888880;">Preferred: ${contactInfo.preferredMethod}${contactInfo.contactWindow ? ` (${contactInfo.contactWindow})` : ''}</p>
+    <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#F5F5F0;"><strong>Contact:</strong> ${safeName}</p>
+    ${contactInfo.phone ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">📞 ${safePhone}</p>` : ''}
+    ${contactInfo.email ? `<p style="margin:0 0 4px;font-size:15px;color:#B8B8B0;">✉️ ${safeEmail}</p>` : ''}
+    <p style="margin:8px 0 0;font-size:13px;color:#888880;">Preferred: ${safePreferredMethod}${safeContactWindow ? ` (${safeContactWindow})` : ''}</p>
   `;
 
   const html = getEmailWrapper(`
-    <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Introduction: ${matchContext.listingTitle}</h1>
+    <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Introduction: ${safeListingTitle}</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
       Both parties have accepted the match. Here are the contact details:
     </p>
@@ -247,10 +273,10 @@ export async function sendIntroductionEmail(
     <p style="margin:24px 0 0;font-size:14px;color:#888880;">
       <a href="${withdrawalUrl}" style="color:#EF5350;text-decoration:underline;">Withdraw from this introduction</a>
     </p>
-  `, `You're connected: ${matchContext.listingTitle} in ${matchContext.locality}`);
+  `, `You're connected: ${safeListingTitle} in ${safeLocality}`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `You're connected: ${matchContext.listingTitle}`,
@@ -271,16 +297,18 @@ export async function sendListingApprovedEmail(
   listingTitle: string,
   listingUrl: string
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  const safeTitle = escapeHtml(listingTitle);
+
   const html = getEmailWrapper(`
     <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#4CAF50;">Listing approved</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
-      Your listing <strong>"${listingTitle}"</strong> has been approved and is now visible to seekers.
+      Your listing <strong>"${safeTitle}"</strong> has been approved and is now visible to seekers.
     </p>
     ${getButton(listingUrl, 'View Listing')}
-  `, `Your listing "${listingTitle}" is live`);
+  `, `Your listing "${safeTitle}" is live`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `Listing approved: ${listingTitle}`,
@@ -296,18 +324,20 @@ export async function sendListingRentedEmail(
   email: string,
   listingTitle: string
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  const safeTitle = escapeHtml(listingTitle);
+
   const html = getEmailWrapper(`
     <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#F5F5F0;">Listing marked as rented</h1>
     <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#B8B8B0;">
-      Your listing <strong>"${listingTitle}"</strong> has been marked as rented and is no longer visible to seekers.
+      Your listing <strong>"${safeTitle}"</strong> has been marked as rented and is no longer visible to seekers.
     </p>
     <p style="margin:0;font-size:14px;color:#888880;">
       You can relist it anytime from your dashboard.
     </p>
-  `, `Your listing "${listingTitle}" is now rented`);
+  `, `Your listing "${safeTitle}" is now rented`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `Listing rented: ${listingTitle}`,
@@ -359,8 +389,8 @@ export async function sendDailyDigestEmail(
   const matchItemsHtml = matches.map(m => `
     <tr>
       <td style="padding:20px 0;border-bottom:1px solid #2E2E2E;">
-        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${m.listing.title}</h3>
-        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${m.listing.locality} • ${m.listing.bhk} ${m.listing.furnishing.replace('_', ' ')} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#F5F5F0;">${escapeHtml(m.listing.title)}</h3>
+        <p style="margin:0 0 4px;font-size:14px;color:#B8B8B0;">${escapeHtml(m.listing.locality)} • ${escapeHtml(m.listing.bhk)} ${escapeHtml(m.listing.furnishing.replace('_', ' '))} • ${m.listing.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate'}</p>
         <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#E8A838;">${formatINR(m.listing.rent)}/month</p>
         <p style="margin:0 0 12px;font-size:13px;color:#888880;">Match score: ${m.score}% • Geography: ${m.scoreBreakdown.geography}% • Budget: ${m.scoreBreakdown.budget}% • BHK: ${m.scoreBreakdown.bhk}% • Timing: ${m.scoreBreakdown.timing}% • Lifestyle: ${m.scoreBreakdown.lifestyle}%</p>
         <a href="${APP_URL}/matches/${m.matchId}" style="color:#E8A838;text-decoration:none;font-weight:500;">View & Respond →</a>
@@ -382,7 +412,7 @@ export async function sendDailyDigestEmail(
   `, `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`);
 
   try {
-    const result = await resend.emails.send({
+    const result = await getResendClient().emails.send({
       from: FROM_EMAIL,
       to: email,
       subject: `${matches.length} new match${matches.length !== 1 ? 'es' : ''} on hyderabad.rent`,

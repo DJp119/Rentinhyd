@@ -42,9 +42,9 @@ BEGIN
         RETURN QUERY EXECUTE format($q$
             SELECT
                 md5(concat(
-                    floor(ST_Y(geom::geometry) / %L) * %L,
+                    floor(ST_Y(geom::geometry) / %1$L) * %1$L,
                     '_',
-                    floor(ST_X(geom::geometry) / %L) * %L
+                    floor(ST_X(geom::geometry) / %1$L) * %1$L
                 ))::uuid as id,
                 (ST_Y(ST_Centroid(ST_Collect(geom::geometry)))::double precision) as lat,
                 (ST_X(ST_Centroid(ST_Collect(geom::geometry)))::double precision) as lon,
@@ -55,13 +55,13 @@ BEGIN
                 MODE() WITHIN GROUP (ORDER BY locality) as locality,
                 COUNT(*) as pin_count
             FROM rent_pins
-            WHERE status = $1
+            WHERE status::text = $1
               AND ST_X(geom::geometry) BETWEEN $2 AND $3
               AND ST_Y(geom::geometry) BETWEEN $4 AND $5
             GROUP BY
-                floor(ST_Y(geom::geometry) / %L) * %L,
-                floor(ST_X(geom::geometry) / %L) * %L
-        $q$, grid_size, grid_size, grid_size, grid_size)
+                floor(ST_Y(geom::geometry) / %1$L) * %1$L,
+                floor(ST_X(geom::geometry) / %1$L) * %1$L
+        $q$, grid_size)
         USING status_filter, min_lon, max_lon, min_lat, max_lat;
     ELSE
         RETURN QUERY EXECUTE $q$
@@ -76,7 +76,7 @@ BEGIN
                 locality,
                 1 as pin_count
             FROM rent_pins
-            WHERE status = $1
+            WHERE status::text = $1
               AND ST_X(geom::geometry) BETWEEN $2 AND $3
               AND ST_Y(geom::geometry) BETWEEN $4 AND $5
             LIMIT 500
@@ -113,7 +113,7 @@ BEGIN
     RETURN QUERY EXECUTE format($q$
         SELECT
             id,
-            listing_type,
+            listing_type::text,
             title,
             locality,
             ST_X(geom::geometry)::double precision as lon,
@@ -122,12 +122,12 @@ BEGIN
             bhk,
             furnishing
         FROM listings
-        WHERE status = $1
+        WHERE status::text = $1
           %s
           AND ST_X(geom::geometry) BETWEEN $2 AND $3
           AND ST_Y(geom::geometry) BETWEEN $4 AND $5
         LIMIT 200
-    $q$, CASE WHEN listing_type_filter IS NOT NULL THEN 'AND listing_type = $6' ELSE '' END)
+    $q$, CASE WHEN listing_type_filter IS NOT NULL THEN 'AND listing_type::text = $6' ELSE '' END)
     USING
         CASE WHEN listing_type_filter IS NOT NULL THEN
             ARRAY[status_filter, min_lon, max_lon, min_lat, max_lat, listing_type_filter]

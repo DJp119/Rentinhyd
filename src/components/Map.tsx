@@ -8,6 +8,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { MapPin } from '@/lib/schemas';
 import { formatINR, formatRentRange } from '@/lib/utils';
+import { ShareButtons } from './ShareButtons';
 
 export type { MapPin };
 
@@ -426,6 +427,11 @@ export function PinBottomSheet({ pin, onClose, onAction }: PinBottomSheetProps) 
                 View Details
               </button>
             )}
+
+            {/* Share buttons */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <ShareButtons pin={pin} showLabel />
+            </div>
           </div>
 
           <button

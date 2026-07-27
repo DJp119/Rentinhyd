@@ -161,6 +161,101 @@ export function safeJsonParse<T>(json: string | null | undefined, fallback: T): 
 }
 
 // ============================================
+// Share Utilities
+// ============================================
+
+export interface ShareContent {
+  title: string;
+  text?: string;
+  url: string;
+}
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://hyderabad.rent';
+
+/**
+ * Generate WhatsApp share URL
+ */
+export function getWhatsAppUrl(content: ShareContent): string {
+  const message = `${content.title}${content.text ? `\n\n${content.text}` : ''}\n\n${content.url}`;
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Copy to clipboard with fallback
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback for older browsers
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * Generate share URLs for different content types
+ */
+export function generatePinShareUrl(pinId: string): string {
+  return `${APP_URL}/pin/${pinId}`;
+}
+
+export function generateListingShareUrl(listingId: string): string {
+  return `${APP_URL}/list/${listingId}`;
+}
+
+export function generateSeekerShareUrl(seekerId: string): string {
+  return `${APP_URL}/seek/${seekerId}`;
+}
+
+/**
+ * Generate share content for a pin
+ */
+export function getPinShareContent(pin: {
+  id: string;
+  type: 'rent_pin' | 'listing';
+  locality: string;
+  bhk: string;
+  furnishing: string;
+  rent?: number;
+  rentMin?: number;
+  rentMax?: number;
+  listingType?: string;
+}): ShareContent {
+  const url = pin.type === 'listing'
+    ? generateListingShareUrl(pin.id)
+    : generatePinShareUrl(pin.id);
+
+  const rentDisplay = pin.rent
+    ? formatINR(pin.rent)
+    : formatRentRange(pin.rentMin || 0, pin.rentMax || 0);
+
+  const typeLabel = pin.type === 'listing'
+    ? (pin.listingType === 'whole_flat' ? 'Whole Flat' : 'Room/Flatmate')
+    : 'Rent Pin';
+
+  return {
+    title: `${typeLabel}: ${pin.bhk} ${pin.furnishing.replace('_', ' ')} in ${pin.locality}`,
+    text: `₹${rentDisplay}/month`,
+    url,
+  };
+}
+
+// ============================================
 // Locality & Privacy Utilities
 // ============================================
 

@@ -148,3 +148,5 @@ graphify-out/cache/stat-index.json
 /.claude
 *.json
 .windsurfrules
+.claude/settings.local.json
+.claude/settings.local.json

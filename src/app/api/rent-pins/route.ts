@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { rentPinSubmitSchema, rentPinResponseSchema } from '@/lib/schemas';
 import { logger } from '@/lib/observability';
 import { verifyTurnstileToken } from '@/lib/security';
-import { applyPrivacyJitter, getLocalityFromPoint, generateRequestFingerprint } from '@/lib/utils';
+import { applyPrivacyJitter, getLocalityFromPoint, generateRequestFingerprint, checkHyderabadRadius } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
 import { logError } from '@/lib/observability';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
@@ -38,6 +38,16 @@ export async function POST(request: NextRequest) {
     if (!turnstile.success) {
       return NextResponse.json(
         { error: 'Turnstile verification failed', details: turnstile.error },
+        { status: 400 }
+      );
+    }
+
+    // Check if within Hyderabad radius (100km)
+    const radiusCheck = checkHyderabadRadius(data.lat, data.lon);
+    if (!radiusCheck.allowed) {
+      requestLogger.warn('rent_pins.outside_hyderabad', { lat: data.lat, lon: data.lon, distanceKm: radiusCheck.distanceKm });
+      return NextResponse.json(
+        { error: radiusCheck.message },
         { status: 400 }
       );
     }

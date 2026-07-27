@@ -82,6 +82,29 @@ export function haversineDistance(
   return R * c; // meters
 }
 
+// Hyderabad center coordinates
+export const HYDERABAD_CENTER = { lat: 17.44, lng: 78.365 };
+export const HYDERABAD_MAX_RADIUS_KM = 100; // 100km radius
+
+/**
+ * Check if a point is within Hyderabad service area
+ * Returns { allowed: boolean, distanceKm: number, message?: string }
+ */
+export function checkHyderabadRadius(lat: number, lon: number): { allowed: boolean; distanceKm: number; message?: string } {
+  const distanceM = haversineDistance(lat, lon, HYDERABAD_CENTER.lat, HYDERABAD_CENTER.lng);
+  const distanceKm = distanceM / 1000;
+
+  if (distanceKm > HYDERABAD_MAX_RADIUS_KM) {
+    return {
+      allowed: false,
+      distanceKm,
+      message: `This pin is more than ${Math.round(distanceKm)} km from Hyderabad. rentinhyderabad is currently focused on the Hyderabad metro area only.`
+    };
+  }
+
+  return { allowed: true, distanceKm };
+}
+
 // Debounce
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,

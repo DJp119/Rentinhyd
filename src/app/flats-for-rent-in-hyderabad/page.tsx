@@ -69,29 +69,27 @@ export default async function FlatsForRentPage() {
     .filter(l => l.wholeFlatCount > 0)
     .sort((a, b) => b.wholeFlatCount - a.wholeFlatCount);
 
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: wholeFlatLocalities.slice(0, 10).map((loc, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      item: {
+        '@type': 'Place',
+        name: `${loc.locality} Flats for Rent`,
+        url: `https://hyderabad.rent/rent/${loc.locality}`,
+      },
+    })),
+  };
+
   return (
-    <html lang="en">
-      <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'ItemList',
-              itemListElement: wholeFlatLocalities.slice(0, 10).map((loc, idx) => ({
-                '@type': 'ListItem',
-                position: idx + 1,
-                item: {
-                  '@type': 'Place',
-                  name: `${loc.locality} Flats for Rent`,
-                  url: `https://hyderabad.rent/rent/${loc.locality}`,
-                },
-              })),
-            }),
-          }}
-        />
-      </head>
-      <body className="min-h-screen bg-background text-textPrimary">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <div className="min-h-screen bg-background text-textPrimary">
         {/* Header */}
         <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-b border-border">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -255,8 +253,8 @@ export default async function FlatsForRentPage() {
             <p className="mt-2 text-xs">⚠ Never pay before visiting and independently verifying the property.</p>
           </div>
         </footer>
-      </body>
-    </html>
+      </div>
+    </>
   );
 }
 

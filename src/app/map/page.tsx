@@ -8,14 +8,16 @@ import { MapComponent, PinBottomSheet, MapPin } from '@/components/Map';
 import { ListingForm } from '@/components/forms/ListingForm';
 import { SeekerForm } from '@/components/forms/SeekerForm';
 import { ListingSubmit, SeekerSubmit } from '@/lib/schemas';
+import { ConsentModal } from '@/components/ConsentModal';
 
 export default function MapPage() {
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
   const [showListForm, setShowListForm] = useState(false);
   const [showSeekForm, setShowSeekForm] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   const handlePinClick = (pin: MapPin) => {
-    setSelectedPin(pin);
+    if (consentGiven) setSelectedPin(pin);
   };
 
   const handleCloseSheet = () => {
@@ -144,6 +146,9 @@ export default function MapPage() {
           }
         }}
       />
+
+      {/* Consent Modal */}
+      <ConsentModal onAccept={() => setConsentGiven(true)} />
 
       {/* Listing Form Modal */}
       {showListForm && (

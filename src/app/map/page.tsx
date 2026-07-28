@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapComponent, PinBottomSheet, MapPin } from '@/components/Map';
 import { ListingForm } from '@/components/forms/ListingForm';
 import { SeekerForm } from '@/components/forms/SeekerForm';
@@ -15,9 +15,29 @@ export default function MapPage() {
   const [showListForm, setShowListForm] = useState(false);
   const [showSeekForm, setShowSeekForm] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const handlePinClick = (pin: MapPin) => {
     if (consentGiven) setSelectedPin(pin);
+  };
+
+  const handleShareMap = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'hyderabad.rent — Rental Map', url });
+        return;
+      } catch {
+        // User cancelled or share failed, fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // Clipboard failed silently
+    }
   };
 
   const handleCloseSheet = () => {
@@ -88,6 +108,20 @@ export default function MapPage() {
               className="px-4 py-2 border border-border text-textSecondary rounded-lg hover:border-accent hover:text-textPrimary transition-colors"
             >
               Find Place
+            </button>
+            <button
+              onClick={handleShareMap}
+              className="p-2 text-textSecondary hover:text-textPrimary transition-colors"
+              aria-label="Share map"
+              data-testid="share-map-button"
+            >
+              {shareCopied ? (
+                <span className="text-xs text-accent font-medium">Copied</span>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              )}
             </button>
           </div>
         </div>

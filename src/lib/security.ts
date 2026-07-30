@@ -10,16 +10,13 @@ export const CSP_DIRECTIVES = {
   'script-src': [
     "'self'",
     "'unsafe-inline'",
-    "'unsafe-eval'",
     'https://challenges.cloudflare.com',
     'https://static.cloudflareinsights.com',
     'https://maps.googleapis.com',
-    'https://*.googleapis.com',
-    'https://*.google.com',
   ],
   'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
   'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
-  'img-src': ["'self'", 'data:', 'https:', 'blob:', 'https://*.googleapis.com', 'https://*.gstatic.com', 'https://*.ggpht.com'],
+  'img-src': ["'self'", 'data:', 'https:', 'blob:', 'https://maps.googleapis.com', 'https://maps.gstatic.com', 'https://*.ggpht.com'],
   'connect-src': [
     "'self'",
     'https://*.supabase.co',
@@ -28,8 +25,6 @@ export const CSP_DIRECTIVES = {
     'https://static.cloudflareinsights.com',
     'https://cloudflareinsights.com',
     'https://maps.googleapis.com',
-    'https://*.googleapis.com',
-    'https://*.google.com',
   ],
   'worker-src': ["'self'", 'blob:'],
   'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
@@ -261,6 +256,8 @@ export async function verifyTurnstileToken(
 // Hash utilities - Web Crypto API
 // ============================================
 
+import { timingSafeEqual } from './crypto-utils';
+
 export async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(token);
@@ -277,11 +274,4 @@ export async function hashEmail(email: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
-export function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
-}
+export { timingSafeEqual as constantTimeEqual } from './crypto-utils';

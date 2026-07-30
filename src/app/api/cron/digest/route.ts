@@ -135,7 +135,7 @@ export async function POST(request: Request) {
   } catch (error) {
     logError('digest.job_failed', error, { endpoint: '/api/cron/digest', durationMs: Date.now() - startTime });
     return NextResponse.json(
-      { error: 'Daily digest job failed', details: String(error) },
+      { error: 'Daily digest job failed' },
       { status: 500 }
     );
   }

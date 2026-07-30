@@ -26,9 +26,6 @@ const phoneSchema = z.string().regex(/^(\+91|91)?[6-9]\d{9}$/, 'Invalid Indian p
 const emailSchema = z.string().email().toLowerCase().max(254);
 const urlSchema = z.string().url().max(500);
 
-const turnoverSchema = z.number().int().min(0).max(100);
-const scoreSchema = z.number().int().min(0).max(100);
-
 // Coordinates with precision bounds
 const latSchema = z.number().min(17.2).max(17.6); // Hyderabad bounds
 const lonSchema = z.number().min(78.2).max(78.6);
@@ -232,6 +229,10 @@ export type PublicListing = z.infer<typeof publicListingSchema>;
 // ============================================
 
 export const seekerSubmitSchema = z.object({
+  // The seeker's email is required to look up / create their identity. It is
+  // not surfaced in public listings. It is validated by Zod here so the
+  // route handler doesn't need an unsafe cast on `data as Record<...>`.
+  email: emailSchema,
   maxBudget: rentSchema,
   minBudget: rentSchema.optional(),
   bhk: bhkSchema,
@@ -311,13 +312,13 @@ export type MatchResponse = z.infer<typeof matchResponseSchema>;
 export const matchDigestItemSchema = z.object({
   matchId: uuidSchema,
   listing: publicListingSchema,
-  score: scoreSchema,
+  score: z.number().int().min(0).max(100),
   scoreBreakdown: z.object({
-    geography: scoreSchema,
-    budget: scoreSchema,
-    bhk: scoreSchema,
-    timing: scoreSchema,
-    lifestyle: scoreSchema,
+    geography: z.number().int().min(0).max(100),
+    budget: z.number().int().min(0).max(100),
+    bhk: z.number().int().min(0).max(100),
+    timing: z.number().int().min(0).max(100),
+    lifestyle: z.number().int().min(0).max(100),
   }),
   // Anonymized seeker info
   seekerProfile: z.object({

@@ -295,6 +295,7 @@ describe('Zod Schema Validation', () => {
 
   describe('seekerSubmitSchema', () => {
     const validSeeker = {
+      email: 'seeker@example.com',
       maxBudget: 30000,
       minBudget: 15000,
       bhk: '2BHK',
@@ -573,6 +574,7 @@ describe('Zod Schema Validation', () => {
           turnstileToken: 'token',
         },
         seekerSubmit: {
+          email: 'test@example.com',
           maxBudget: 30000,
           bhk: '2BHK',
           listingType: 'whole_flat',

@@ -1,6 +1,9 @@
 // src/lib/tokens.ts
 // Secure token generation, hashing, and verification (Edge Runtime compatible)
 
+import { timingSafeEqual } from './crypto-utils';
+import { generateRequestFingerprint } from './utils';
+
 // ============================================
 // Token configuration
 // ============================================
@@ -36,18 +39,6 @@ export async function hashToken(token: string): Promise<string> {
 export async function verifyToken(token: string, hash: string): Promise<boolean> {
   const tokenHash = await hashToken(token);
   return timingSafeEqual(tokenHash, hash);
-}
-
-/**
- * Constant-time string comparison (Edge compatible)
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
 }
 
 /**
@@ -114,43 +105,4 @@ export async function generateIdempotencyKey(prefix: string, identifier: string)
   const hashArray = new Uint8Array(hashBuffer);
   const hash = Array.from(hashArray, b => b.toString(16).padStart(2, '0')).join('');
   return `${prefix}_${hash.slice(0, 16)}`;
-}
-
-/**
- * Hash IP address for abuse tracking (with salt from env) (Edge compatible)
- */
-export async function hashIpFingerprint(ip: string): Promise<string> {
-  const salt = process.env.IP_FINGERPRINT_SALT;
-  if (!salt) {
-    throw new Error('IP_FINGERPRINT_SALT environment variable is required');
-  }
-  if (salt.length < 32) {
-    throw new Error('IP_FINGERPRINT_SALT must be at least 32 characters');
-  }
-  const encoder = new TextEncoder();
-  const data = encoder.encode(`${salt}:${ip}`);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = new Uint8Array(hashBuffer);
-  return Array.from(hashArray, b => b.toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Generate a fingerprint from request headers for rate limiting (Edge compatible)
- */
-export async function generateRequestFingerprint(
-  headers: Record<string, string | string[] | undefined>
-): Promise<string> {
-  const ip = (headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
-    || headers['x-real-ip'] as string
-    || 'unknown';
-
-  const userAgent = headers['user-agent'] as string || 'unknown';
-  const acceptLanguage = headers['accept-language'] as string || '';
-
-  // Create a stable fingerprint without storing raw IP
-  const encoder = new TextEncoder();
-  const data = encoder.encode(`${ip}:${userAgent}:${acceptLanguage}`);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = new Uint8Array(hashBuffer);
-  return Array.from(hashArray, b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }

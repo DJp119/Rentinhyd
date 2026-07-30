@@ -142,43 +142,6 @@ describe('Utility Functions', () => {
     });
   });
 
-  describe('debounce', () => {
-    it('delays function execution', async () => {
-      let calls = 0;
-      const fn = () => { calls++; };
-      const debounced = debounce(fn, 50);
-
-      debounced();
-      debounced();
-      debounced();
-
-      expect(calls).toBe(0);
-
-      await new Promise(r => setTimeout(r, 100));
-      expect(calls).toBe(1);
-    });
-
-    it('passes arguments correctly', async () => {
-      let lastArgs: unknown[] = [];
-      const fn = (...args: unknown[]) => { lastArgs = args; };
-      const debounced = debounce(fn, 10);
-
-      debounced('hello', 'world');
-      await new Promise(r => setTimeout(r, 50));
-      expect(lastArgs).toEqual(['hello', 'world']);
-    });
-  });
-
-  describe('sleep', () => {
-    it('resolves after specified ms', async () => {
-      const start = Date.now();
-      await sleep(50);
-      const elapsed = Date.now() - start;
-      expect(elapsed).toBeGreaterThanOrEqual(45); // Allow some tolerance
-      expect(elapsed).toBeLessThan(200);
-    });
-  });
-
   describe('generateRequestFingerprint', () => {
     it('generates consistent fingerprint for same headers', async () => {
       const headers = {

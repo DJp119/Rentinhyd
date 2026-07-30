@@ -6,6 +6,8 @@
 -- City-wide Statistics View (camelCase to match TS interfaces)
 -- ============================================
 
+DROP VIEW IF EXISTS public_city_stats;
+
 CREATE VIEW public_city_stats AS
 SELECT
     (SELECT COUNT(*) FROM rent_pins WHERE status = 'approved') as "totalRentPins",
@@ -18,6 +20,8 @@ GRANT SELECT ON public_city_stats TO anon, authenticated;
 -- ============================================
 -- Locality Statistics View (camelCase to match TS interfaces)
 -- ============================================
+
+DROP VIEW IF EXISTS public_locality_stats;
 
 CREATE VIEW public_locality_stats AS
 WITH stats AS (

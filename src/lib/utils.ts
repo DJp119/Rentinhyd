@@ -8,6 +8,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Escape HTML special characters to prevent XSS
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&apos;');
+}
+
 // Format INR currency
 export function formatINR(amount: number, options: { compact?: boolean; showSymbol?: boolean } = {}): string {
   const { compact = false, showSymbol = true } = options;
@@ -103,23 +113,6 @@ export function checkHyderabadRadius(lat: number, lon: number): { allowed: boole
   }
 
   return { allowed: true, distanceKm };
-}
-
-// Debounce
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  fn: T,
-  ms: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), ms);
-  };
-}
-
-// Sleep utility
-export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**

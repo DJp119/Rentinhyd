@@ -15,9 +15,7 @@ const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 const ALG = { name: 'HMAC', hash: 'SHA-256' } as const;
 
 function b64encode(bytes: Uint8Array): string {
-  let s = '';
-  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-  return btoa(s);
+  return btoa(String.fromCharCode(...bytes));
 }
 
 function b64decode(s: string): Uint8Array {

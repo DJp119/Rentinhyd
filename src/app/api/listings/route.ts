@@ -9,7 +9,7 @@ import { generateRequestFingerprint } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { listingSubmitSchema, listingResponseSchema } from '@/lib/schemas';
 import { logger } from '@/lib/observability';
-import { generateVerificationPair, hashToken } from '@/lib/tokens';
+import { generateVerificationPair } from '@/lib/tokens';
 import { sendListingVerificationEmail } from '@/lib/email';
 
 

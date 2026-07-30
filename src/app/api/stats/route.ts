@@ -2,7 +2,6 @@
 // GET /api/stats - Live statistics
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 import { statsQuerySchema, localityStatsSchema, cityStatsSchema, viewportStatsSchema } from '@/lib/schemas';
 import { logger } from '@/lib/observability';
 import { parseBbox, isValidBbox } from '@/lib/utils';

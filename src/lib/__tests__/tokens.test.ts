@@ -12,8 +12,8 @@ import {
   generateVerificationPair,
   generateActionPair,
   generateIdempotencyKey,
-  generateRequestFingerprint,
 } from '../tokens';
+import { generateRequestFingerprint } from '../utils';
 
 describe('Token Utilities', () => {
   describe('generateToken', () => {

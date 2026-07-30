@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       maxAge: cookie.maxAge,
     });
     return res;
-  } catch (e) {
+  } catch (_e) {
     return NextResponse.json({ error: 'Failed to mint session' }, { status: 500 });
   }
 }

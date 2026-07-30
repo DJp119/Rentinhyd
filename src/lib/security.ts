@@ -172,29 +172,6 @@ export async function decrypt(encrypted: string, iv: string, tag: string): Promi
 }
 
 // ============================================
-// Input Validation & Sanitization
-// ============================================
-
-export function sanitizeHtml(input: string): string {
-  return input
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, '&apos;')
-    .replace(/\//g, '&#x2F;');
-}
-
-export function sanitizeForLog(input: string): string {
-  // Remove potential PII patterns
-  return input
-    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
-    .replace(/(\+91|91)?[6-9]\d{9}/g, '[PHONE]')
-    .replace(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, '[CARD]')
-    .replace(/\b\d{12}\b/g, '[AADHAAR]');
-}
-
-// ============================================
 // Rate Limiting Helpers
 // ============================================
 

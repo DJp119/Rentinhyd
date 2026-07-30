@@ -10,12 +10,9 @@ import { z } from 'zod';
 // ============================================
 
 const uuidSchema = z.string().uuid({ message: 'Invalid UUID format' });
-const positiveInt = z.number().int().positive();
-const nonNegativeInt = z.number().int().nonnegative();
 
 const rentSchema = z.number().int().min(1000).max(500000); // ₹1k - ₹5L
 const depositSchema = z.number().int().min(0).max(24);
-const areaSchema = z.number().int().min(100).max(10000); // sq ft
 
 const localitySchema = z.string().min(2).max(50).regex(/^[a-z0-9-]+$/);
 const bhkSchema = z.enum(['1BHK', '2BHK', '3BHK', '4+BHK', 'room', 'any']);
@@ -24,7 +21,6 @@ const listingTypeSchema = z.enum(['whole_flat', 'room_flatmate']);
 
 const phoneSchema = z.string().regex(/^(\+91|91)?[6-9]\d{9}$/, 'Invalid Indian phone number');
 const emailSchema = z.string().email().toLowerCase().max(254);
-const urlSchema = z.string().url().max(500);
 
 // Coordinates with precision bounds
 const latSchema = z.number().min(17.2).max(17.6); // Hyderabad bounds
@@ -33,10 +29,6 @@ const pointSchema = z.object({
   type: z.literal('Point'),
   coordinates: z.tuple([lonSchema, latSchema]),
 });
-
-// Pagination
-const pageSchema = z.number().int().min(1).default(1);
-const limitSchema = z.number().int().min(1).max(100).default(20);
 
 // ============================================
 // Map API

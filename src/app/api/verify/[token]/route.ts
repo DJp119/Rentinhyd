@@ -5,8 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyTokenSchema, verifyResponseSchema } from '@/lib/schemas';
 import { logger } from '@/lib/observability';
-import { hashToken, verifyToken } from '@/lib/tokens';
-import { sendListingApprovedEmail, sendSeekerVerificationEmail } from '@/lib/email';
+import { hashToken } from '@/lib/tokens';
+import { sendListingApprovedEmail } from '@/lib/email';
 import { logAuditEvent } from '@/lib/supabase';
 import { logError } from '@/lib/observability';
 

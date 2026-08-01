@@ -1,15 +1,14 @@
 // src/app/api/rent-pins/route.ts
 // POST /api/rent-pins - Anonymous rent pin submission with Turnstile
 
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { rentPinSubmitSchema, rentPinResponseSchema } from '@/lib/schemas';
-import { logger } from '@/lib/observability';
-import { verifyTurnstileToken } from '@/lib/security';
-import { applyPrivacyJitter, getLocalityFromPoint, generateRequestFingerprint, checkHyderabadRadius } from '@/lib/utils';
-import { logAuditEvent } from '@/lib/supabase';
+import { supabase, getLocalityFromPoint, applyPrivacyJitter, logAuditEvent } from '@/lib/supabase';
 import { logError } from '@/lib/observability';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
+import { verifyTurnstileToken } from '@/lib/security';
+import { generateRequestFingerprint, checkHyderabadRadius } from '@/lib/utils';
+import { NextRequest, NextResponse } from 'next/server';
+import { rentPinSubmitSchema, rentPinResponseSchema } from '@/lib/schemas';
+import { logger } from '@/lib/observability';
 
 
 export async function POST(request: NextRequest) {
@@ -79,11 +78,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Apply privacy jitter to coordinates
-    const jittered = applyPrivacyJitter(data.lon, data.lat);
+    const jittered = await applyPrivacyJitter(data.lon, data.lat);
     const jitteredGeom = { lat: jittered[1], lon: jittered[0] };
 
     // Determine locality from coordinates (if not provided or mismatch)
-    const locality = getLocalityFromPoint(data.lon, data.lat) || data.locality;
+    const locality = (await getLocalityFromPoint(data.lon, data.lat)) || data.locality;
 
     // Insert rent pin
     const { data: pin, error } = await supabase

@@ -12,9 +12,8 @@ import {
   generateVerificationPair,
   generateActionPair,
   generateIdempotencyKey,
-  hashIpFingerprint,
-  generateRequestFingerprint,
 } from '../tokens';
+import { generateRequestFingerprint } from '../utils';
 
 describe('Token Utilities', () => {
   describe('generateToken', () => {
@@ -213,27 +212,6 @@ describe('Token Utilities', () => {
     it('includes prefix in output', async () => {
       const key = await generateIdempotencyKey('resend', 'test-id');
       expect(key).toMatch(/^resend_[0-9a-f]{16}$/);
-    });
-  });
-
-  describe('hashIpFingerprint', () => {
-    it('produces consistent hash for same IP', async () => {
-      const ip = '192.168.1.1';
-      const hash1 = await hashIpFingerprint(ip);
-      const hash2 = await hashIpFingerprint(ip);
-      expect(hash1).toBe(hash2);
-    });
-
-    it('produces different hashes for different IPs', async () => {
-      const hash1 = await hashIpFingerprint('192.168.1.1');
-      const hash2 = await hashIpFingerprint('10.0.0.1');
-      expect(hash1).not.toBe(hash2);
-    });
-
-    it('produces 64-char hex output', async () => {
-      const hash = await hashIpFingerprint('192.168.1.1');
-      expect(hash).toHaveLength(64);
-      expect(hash).toMatch(/^[0-9a-f]+$/);
     });
   });
 

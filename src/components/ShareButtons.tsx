@@ -13,23 +13,20 @@ import {
 } from '@/lib/utils';
 
 interface ShareButtonsProps {
-  content: ShareContent;
-  className?: string;
-  showLabel?: boolean;
-}
-
-interface ShareButtonsWithPinProps {
-  pin: {
-    id: string;
-    type: 'rent_pin' | 'listing';
-    locality: string;
-    bhk: string;
-    furnishing: string;
-    rent?: number;
-    rentMin?: number;
-    rentMax?: number;
-    listingType?: string;
-  };
+  /** Either a pin object OR pre-built share content */
+  contentOrPin:
+    | ShareContent
+    | {
+        id: string;
+        type: 'rent_pin' | 'listing';
+        locality: string;
+        bhk: string;
+        furnishing: string;
+        rent?: number;
+        rentMin?: number;
+        rentMax?: number;
+        listingType?: string;
+      };
   className?: string;
   showLabel?: boolean;
 }
@@ -52,58 +49,20 @@ const COPIED_SVG = (
   </svg>
 );
 
-export function ShareButtons({ pin, className = '', showLabel = false }: ShareButtonsWithPinProps) {
+function isShareContent(obj: ShareButtonsProps['contentOrPin']): obj is ShareContent {
+  return 'title' in obj && 'url' in obj;
+}
+
+export function ShareButtons({ contentOrPin, className = '', showLabel = false }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
 
-  const shareContent = getPinShareContent(pin);
+  const shareContent = isShareContent(contentOrPin)
+    ? contentOrPin
+    : getPinShareContent(contentOrPin);
   const whatsappUrl = getWhatsAppUrl(shareContent);
 
   const handleCopy = async () => {
     const success = await copyToClipboard(shareContent.url);
-    if (success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <a
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          'flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors',
-          showLabel && 'whitespace-nowrap'
-        )}
-        aria-label="Share on WhatsApp"
-      >
-        {WHATSAPP_SVG}
-        {showLabel && <span>WhatsApp</span>}
-      </a>
-
-      <button
-        onClick={handleCopy}
-        className={cn(
-          'flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-border bg-backgroundElevated text-textSecondary hover:border-accent/50 hover:text-textPrimary transition-colors',
-          showLabel && 'whitespace-nowrap'
-        )}
-        aria-label={copied ? 'Copied to clipboard' : 'Copy link'}
-      >
-        {copied ? COPIED_SVG : COPY_SVG}
-        {showLabel && <span>{copied ? 'Copied!' : 'Copy Link'}</span>}
-      </button>
-    </div>
-  );
-}
-
-// Alternative: accept pre-built share content
-export function ShareButtonsFromContent({ content, className = '', showLabel = false }: ShareButtonsProps) {
-  const [copied, setCopied] = useState(false);
-  const whatsappUrl = getWhatsAppUrl(content);
-
-  const handleCopy = async () => {
-    const success = await copyToClipboard(content.url);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

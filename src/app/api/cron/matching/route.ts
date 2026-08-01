@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { generateMatchingSQL, calculateMatchScore, type ScoreBreakdown } from '@/lib/matching';
+import { calculateMatchScore, type ScoreBreakdown } from '@/lib/matching';
 import { sendMatchDigestEmail } from '@/lib/email';
 import { generateToken } from '@/lib/tokens';
 import { logger, logError } from '@/lib/observability';
@@ -278,7 +278,7 @@ export async function POST(request: Request) {
     } catch (error) {
     logError('matching.job_failed', error, { endpoint: '/api/cron/matching', durationMs: Date.now() - startTime });
     return NextResponse.json(
-      { error: 'Matching job failed', details: String(error) },
+      { error: 'Matching job failed' },
       { status: 500 }
     );
   }

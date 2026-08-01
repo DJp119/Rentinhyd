@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resendWebhookSchema } from '@/lib/schemas';
 import { handleResendWebhook } from '@/lib/webhooks';
-import { logger, logError } from '@/lib/observability';
+import { logger } from '@/lib/observability';
 
 
 export async function POST(request: NextRequest) {

@@ -2,7 +2,6 @@
 // Pre-aggregated statistics for performance
 
 import { supabase } from './supabase';
-import { logger } from './observability';
 
 // ============================================
 // Locality Statistics
@@ -26,51 +25,6 @@ export interface LocalityStats {
     distanceMeters: number;
     line: string;
   };
-}
-
-/**
- * Compute locality statistics from approved listings
- * Called periodically via cron or on mutation
- */
-export async function refreshLocalityStats(): Promise<{ updated: number; errors: string[] }> {
-  const errors: string[] = [];
-  let updated = 0;
-
-  try {
-    // Get all localities with approved listings
-    const { data: localities, error } = await supabase
-      .from('listings')
-      .select('locality, listing_type, rent, bhk, amenities, updated_at')
-      .eq('status', 'approved');
-
-    if (error) throw error;
-
-    if (!localities || localities.length === 0) {
-      return { updated: 0, errors: [] };
-    }
-
-    // Group by locality
-    const groups = new Map<string, typeof localities>();
-    for (const listing of localities) {
-      const group = groups.get(listing.locality) || [];
-      group.push(listing);
-      groups.set(listing.locality, group);
-    }
-
-    // Compute stats for each locality
-    for (const [locality, listings] of groups) {
-      const stats = computeLocalityStats(locality, listings);
-      await upsertLocalityStats(stats);
-      updated++;
-    }
-
-    logger.info('aggregates.locality_stats_refreshed', { updated });
-  } catch (error) {
-    errors.push((error as Error).message);
-    logger.error('aggregates.locality_stats_failed', { error: (error as Error).message });
-  }
-
-  return { updated, errors };
 }
 
 function computeLocalityStats(locality: string, listings: Array<{
@@ -115,13 +69,6 @@ function computeLocalityStats(locality: string, listings: Array<{
   };
 }
 
-async function upsertLocalityStats(stats: LocalityStats) {
-  // Store in a materialized view table or cache
-  // For now, we use the public_locality_stats view which computes on demand
-  // This function would write to a cache table in production
-  logger.debug('aggregates.locality_stats_computed', { locality: stats.locality, count: stats.totalListings });
-}
-
 /**
  * Get locality stats (from cache or compute on demand)
  */
@@ -134,7 +81,7 @@ export async function getLocalityStats(locality: string): Promise<LocalityStats 
 
   if (error) {
     if (error.code === 'PGRST116') return null;
-    logger.error('aggregates.get_locality_stats_failed', { error: error.message });
+    console.error('aggregates.get_locality_stats_failed', { error: error.message });
     return null;
   }
 
@@ -151,7 +98,7 @@ export async function getAllLocalityStats(): Promise<LocalityStats[]> {
     .order('total_listings', { ascending: false });
 
   if (error) {
-    logger.error('aggregates.get_all_locality_stats_failed', { error: error.message });
+    console.error('aggregates.get_all_locality_stats_failed', { error: error.message });
     return [];
   }
 
@@ -176,7 +123,7 @@ export async function getCityStats(): Promise<CityStats> {
     .single();
 
   if (error) {
-    logger.error('aggregates.get_city_stats_failed', { error: error.message });
+    console.error('aggregates.get_city_stats_failed', { error: error.message });
     return { totalRentPins: 0, totalListings: 0, totalSeekers: 0, totalMatches: 0 };
   }
 
@@ -227,7 +174,7 @@ export async function getViewportStats(bbox: [number, number, number, number]): 
     });
 
   if (pinsError || listingsError) {
-    logger.error('aggregates.viewport_stats_failed', { pinsError: pinsError?.message, listingsError: listingsError?.message });
+    console.error('aggregates.viewport_stats_failed', { pinsError: pinsError?.message, listingsError: listingsError?.message });
     return { pinsByBhk: {}, pinsByRentBand: {}, listingsByType: {}, totalInViewport: 0 };
   }
 
@@ -282,7 +229,7 @@ export async function getMatchStats(): Promise<MatchStats> {
     .rpc('get_match_stats');
 
   if (error) {
-    logger.error('aggregates.get_match_stats_failed', { error: error.message });
+    console.error('aggregates.get_match_stats_failed', { error: error.message });
     return {
       totalMatches: 0, pending: 0, accepted: 0, declined: 0,
       introduced: 0, expired: 0, avgScore: 0,
@@ -310,7 +257,7 @@ export async function getReportStats(): Promise<ReportStats> {
     .rpc('get_report_stats');
 
   if (error) {
-    logger.error('aggregates.get_report_stats_failed', { error: error.message });
+    console.error('aggregates.get_report_stats_failed', { error: error.message });
     return { total: 0, pending: 0, resolved: 0, byReason: {}, byTargetType: {} };
   }
 

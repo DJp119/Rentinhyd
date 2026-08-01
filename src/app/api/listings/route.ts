@@ -1,17 +1,15 @@
 // src/app/api/listings/route.ts
 // POST /api/listings - Verified listing submission
 
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { listingSubmitSchema, listingResponseSchema } from '@/lib/schemas';
-import { logger } from '@/lib/observability';
-import { verifyTurnstileToken, encrypt } from '@/lib/security';
-import { getLocalityFromPoint, applyPrivacyJitter, generateRequestFingerprint } from '@/lib/utils';
-import { logAuditEvent } from '@/lib/supabase';
+import { supabase, getLocalityFromPoint, applyPrivacyJitter, logAuditEvent } from '@/lib/supabase';
 import { logError } from '@/lib/observability';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
-import { hashEmail } from '@/lib/security';
-import { generateVerificationPair, hashToken } from '@/lib/tokens';
+import { verifyTurnstileToken, encrypt, hashEmail } from '@/lib/security';
+import { generateRequestFingerprint } from '@/lib/utils';
+import { NextRequest, NextResponse } from 'next/server';
+import { listingSubmitSchema, listingResponseSchema } from '@/lib/schemas';
+import { logger } from '@/lib/observability';
+import { generateVerificationPair } from '@/lib/tokens';
 import { sendListingVerificationEmail } from '@/lib/email';
 
 
@@ -122,10 +120,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine locality from coordinates
-    const locality = getLocalityFromPoint(data.lon, data.lat) || data.locality;
+    const locality = (await getLocalityFromPoint(data.lon, data.lat)) || data.locality;
 
     // Apply privacy jitter for public map
-    const jittered = applyPrivacyJitter(data.lon, data.lat);
+    const jittered = await applyPrivacyJitter(data.lon, data.lat);
 
     // Generate verification token
     const { token: verificationToken, hash: verificationHash, expiresAt } = await generateVerificationPair();

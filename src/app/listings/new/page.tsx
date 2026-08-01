@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { ListingForm } from '@/components/forms/ListingForm';
 import { toast } from 'sonner';
 import type { ListingSubmit } from '@/lib/schemas';
 import Link from 'next/link';
 
 export default function NewListingPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (data: ListingSubmit) => {
-    setIsSubmitting(true);
     try {
       const response = await fetch('/api/listings', {
         method: 'POST',
@@ -32,8 +29,6 @@ export default function NewListingPage() {
       }
     } catch (err) {
       toast.error('Network error', { description: 'Please try again' });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

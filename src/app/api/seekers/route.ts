@@ -44,16 +44,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get email from auth context or require it
-    // For now, require email in body (would come from verified session in production)
-    const email = (data as Record<string, unknown>).email as string;
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      );
-    }
-
+    // Get or create identity from the validated email in the request body.
+    const email = data.email;
     const emailLower = email.toLowerCase();
 
     // Check: only one active seeker per verified email

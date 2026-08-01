@@ -15,14 +15,17 @@ async function getListings(searchParams: Promise<{ status?: string; page?: strin
   const from = (pageNum - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  // SECURITY: do not select contact_email / contact_phone (PII) at the list
+  // view. If an admin needs raw contact info, expose it through a dedicated
+  // per-record admin action that audits the access.
   let query = supabase
     .from('listings')
     .select(`
       *,
       listing_private (
-        contact_email,
-        contact_phone,
-        owner_id
+        contact_method,
+        contact_window_start,
+        contact_window_end
       )
     `, { count: 'exact' })
     .order('created_at', { ascending: false })

@@ -6,14 +6,26 @@ const CONSENT_KEY = 'rentinhyd_consent';
 
 export function ConsentModal({ onAccept }: { onAccept: () => void }) {
   const [show, setShow] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'privacy' | 'terms'>('privacy');
 
   useEffect(() => {
-    const consented = localStorage.getItem(CONSENT_KEY);
-    if (!consented) {
-      setShow(true);
+    console.log('[ConsentModal] useEffect running, checking localStorage');
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      const consented = localStorage.getItem(CONSENT_KEY);
+      console.log('[ConsentModal] localStorage consent value:', consented);
+      if (!consented) {
+        console.log('[ConsentModal] No consent found, setting show=true');
+        setShow(true);
+      }
     }
   }, []);
+
+  console.log('[ConsentModal] render: mounted=', mounted, 'show=', show);
+
+  // Don't render anything before mounted to avoid hydration mismatch
+  if (!mounted) return null;
 
   const handleAccept = () => {
     localStorage.setItem(CONSENT_KEY, 'true');
@@ -21,10 +33,11 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
     onAccept();
   };
 
+  // Only show after checking localStorage
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay animate-fade-in" data-testid="consent-modal">
       <div className="bg-backgroundElevated border border-border rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="p-6 border-b border-border">
@@ -260,6 +273,7 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
           <button
             onClick={handleAccept}
             className="btn-primary px-8"
+            data-testid="consent-accept"
           >
             I Agree — Enter Map
           </button>

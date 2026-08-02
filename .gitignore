@@ -150,3 +150,16 @@ graphify-out/cache/stat-index.json
 .windsurfrules
 .claude/settings.local.json
 .claude/settings.local.json
+graphify-out/.graphify_labels.json
+graphify-out/.graphify_labels.json
+/graphify-out
+graphify-out/manifest.json
+/graphify-out
+/.agents/skills/svelte-runes/examples
+/.agents/skills/svelte-runes/references
+/.agents/skills/svelte-runes
+*.png
+pnpm-lock.yaml
+pnpm-workspace.yaml
+skills-lock.json
+*.json

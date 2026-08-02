@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 import { supabase, logAuditEvent } from './supabase';
 import { generateIdempotencyKey, hashToken } from './tokens';
 import { sendListingRentedEmail, sendListingApprovedEmail } from './email';
+import { timingSafeEqual } from './crypto-utils';
 
 // ============================================
 // Configuration
@@ -63,18 +64,6 @@ export async function verifyResendSignature(
   const expectedSig = Array.from(signatureArray, b => b.toString(16).padStart(2, '0')).join('');
 
   return timingSafeEqual(expectedSig, receivedSig);
-}
-
-/**
- * Constant-time string comparison (Edge compatible)
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
 }
 
 // ============================================
@@ -167,7 +156,6 @@ export async function handleResendWebhook(
     fromEmail: payload.from,
     subject: payload.subject,
     bodyHash: await hashToken(payload.text || payload.html || ''),
-    bodyEncrypted: encryptEmailBody(bodyText), // In production, use proper encryption
     emailType: 'command',
     commandParsed: command,
     status: 'processed',
@@ -193,6 +181,25 @@ export async function handleResendWebhook(
 // Command Processing
 // ============================================
 
+// Parse a per-listing action token out of the inbound email body. Outbound
+// emails embed `#token=<hex>#` in the body; recipients reply to that email, so
+// the token appears in the quoted reply. Without this scoping, anyone who can
+// spoof the From header for a verified identity could mass-rent/withdraw every
+// listing owned by that identity (see H3 in the security audit).
+async function parseListingToken(bodyText: string): Promise<{ listingId: string } | null> {
+  const match = bodyText.match(/#token=([0-9a-f]{8,256})#/i);
+  if (!match) return null;
+  const token = match[1];
+  const { hashToken } = await import('./tokens');
+  const tokenHash = await hashToken(token);
+  const { data: lp } = await supabase
+    .from('listing_private')
+    .select('listing_id')
+    .eq('verification_token_hash', tokenHash)
+    .maybeSingle();
+  return lp?.listing_id ? { listingId: lp.listing_id } : null;
+}
+
 async function processCommand(
   command: SupportedCommand,
   fromEmail: string,
@@ -212,33 +219,42 @@ async function processCommand(
     return 'no_verified_identity';
   }
 
+  // SECURITY: listing-scoped commands REQUIRE a per-listing action token in the
+  // body. If the reply doesn't carry one, we refuse rather than guessing which
+  // listing the user meant (this used to pick listings[0] for the whole owner).
+  const scoped = await parseListingToken(bodyText);
+
   switch (command) {
     case 'rented':
-      return await handleRentedCommand(identity.id, toEmail);
+      if (!scoped) return 'no_listing_token';
+      return await handleRentedCommand(identity.id, scoped.listingId, toEmail);
     case 'still available':
-      return await handleStillAvailableCommand(identity.id, toEmail);
+      if (!scoped) return 'no_listing_token';
+      return await handleStillAvailableCommand(identity.id, scoped.listingId, toEmail);
     case 'withdraw':
+      // withdraw is identity-scoped (revokes own seek requests), not listing-scoped
       return await handleWithdrawCommand(identity.id, toEmail);
     default:
       return 'unknown_command';
   }
 }
 
-async function handleRentedCommand(identityId: string, toEmail: string): Promise<string> {
-  // Find the listing this email relates to (from to address or context)
-  // For now, mark all owner's approved listings as rented
-  const { data: listings } = await supabase
+async function handleRentedCommand(identityId: string, listingId: string, toEmail: string): Promise<string> {
+  // Verify this listing is owned by the verified identity before mutating.
+  const { data: listing } = await supabase
     .from('listings')
-    .select('id, title')
+    .select('id, title, owner_id, status')
+    .eq('id', listingId)
     .eq('owner_id', identityId)
-    .eq('status', 'approved');
+    .maybeSingle();
 
-  if (!listings || listings.length === 0) {
-    return 'no_listings_found';
+  if (!listing) {
+    return 'listing_not_owned_or_not_found';
+  }
+  if (listing.status !== 'approved') {
+    return 'listing_not_approved';
   }
 
-  // Mark first listing as rented (in practice, would identify specific listing)
-  const listing = listings[0];
   await supabase
     .from('listings')
     .update({ status: 'rented', rented_at: new Date().toISOString() })
@@ -259,21 +275,22 @@ async function handleRentedCommand(identityId: string, toEmail: string): Promise
   return 'listing_marked_rented';
 }
 
-async function handleStillAvailableCommand(identityId: string, toEmail: string): Promise<string> {
-  // Refresh listing expiry
-  const { data: listings } = await supabase
+async function handleStillAvailableCommand(identityId: string, listingId: string, toEmail: string): Promise<string> {
+  // Refresh the specific listing's expiry — only if the caller owns it.
+  const { data: listing } = await supabase
     .from('listings')
-    .select('id, title')
+    .select('id, title, owner_id, status')
+    .eq('id', listingId)
     .eq('owner_id', identityId)
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-    .limit(1);
+    .maybeSingle();
 
-  if (!listings || listings.length === 0) {
-    return 'no_listings_found';
+  if (!listing) {
+    return 'listing_not_owned_or_not_found';
+  }
+  if (listing.status !== 'approved') {
+    return 'listing_not_approved';
   }
 
-  const listing = listings[0];
   await supabase
     .from('listings')
     .update({ expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() })
@@ -366,14 +383,4 @@ async function queueForReview(emailEventId: string, bodyText: string, fromEmail:
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-}
-
-// Simple encryption placeholder - replace with proper encryption in production
-function encryptEmailBody(text: string): string {
-  // In production: use libsodium or Web Crypto API with proper key management
-  return Buffer.from(text).toString('base64');
-}
-
-function decryptEmailBody(encrypted: string): string {
-  return Buffer.from(encrypted, 'base64').toString('utf-8');
 }

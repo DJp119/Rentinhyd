@@ -3,6 +3,7 @@
 
 import { Resend } from 'resend';
 import { generateVerificationPair, generateActionPair } from './tokens';
+import { formatINR, escapeHtml } from './utils';
 
 function getResendClient(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -14,18 +15,6 @@ function getResendClient(): Resend {
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@rentinhyderabad.in';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://rentinhyderabad.in';
-
-/**
- * Escape HTML special characters to prevent XSS in email templates
- */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, '&apos;');
-}
 
 // ============================================
 // Email Templates
@@ -422,12 +411,4 @@ export async function sendDailyDigestEmail(
   } catch (error) {
     return { success: false, error: (error as Error).message };
   }
-}
-
-// ============================================
-// Helper (re-export from utils for email template)
-// ============================================
-
-function formatINR(amount: number): string {
-  return `₹${amount.toLocaleString('en-IN')}`;
 }

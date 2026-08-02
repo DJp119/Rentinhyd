@@ -431,7 +431,7 @@ export function PinBottomSheet({ pin, onClose, onAction }: PinBottomSheetProps) 
 
             {/* Share buttons */}
             <div className="mt-4 pt-4 border-t border-border">
-              <ShareButtons pin={pin} showLabel />
+              <ShareButtons contentOrPin={pin} showLabel />
             </div>
           </div>
 

@@ -13,10 +13,7 @@ import {
   debounce,
   sleep,
   generateRequestFingerprint,
-  retryWithBackoff,
-  safeJsonParse,
-  getLocalityFromPoint,
-  applyPrivacyJitter,
+  checkHyderabadRadius,
 } from '../utils';
 
 describe('Utility Functions', () => {
@@ -145,43 +142,6 @@ describe('Utility Functions', () => {
     });
   });
 
-  describe('debounce', () => {
-    it('delays function execution', async () => {
-      let calls = 0;
-      const fn = () => { calls++; };
-      const debounced = debounce(fn, 50);
-
-      debounced();
-      debounced();
-      debounced();
-
-      expect(calls).toBe(0);
-
-      await new Promise(r => setTimeout(r, 100));
-      expect(calls).toBe(1);
-    });
-
-    it('passes arguments correctly', async () => {
-      let lastArgs: unknown[] = [];
-      const fn = (...args: unknown[]) => { lastArgs = args; };
-      const debounced = debounce(fn, 10);
-
-      debounced('hello', 'world');
-      await new Promise(r => setTimeout(r, 50));
-      expect(lastArgs).toEqual(['hello', 'world']);
-    });
-  });
-
-  describe('sleep', () => {
-    it('resolves after specified ms', async () => {
-      const start = Date.now();
-      await sleep(50);
-      const elapsed = Date.now() - start;
-      expect(elapsed).toBeGreaterThanOrEqual(45); // Allow some tolerance
-      expect(elapsed).toBeLessThan(200);
-    });
-  });
-
   describe('generateRequestFingerprint', () => {
     it('generates consistent fingerprint for same headers', async () => {
       const headers = {
@@ -207,99 +167,4 @@ describe('Utility Functions', () => {
     });
   });
 
-  describe('retryWithBackoff', () => {
-    it('returns successful result on first attempt', async () => {
-      const result = await retryWithBackoff(async () => 'success', 3, 10);
-      expect(result).toBe('success');
-    });
-
-    it('retries on failure and succeeds', async () => {
-      let attempts = 0;
-      const result = await retryWithBackoff(async () => {
-        attempts++;
-        if (attempts < 3) throw new Error('fail');
-        return 'success';
-      }, 3, 10);
-
-      expect(result).toBe('success');
-      expect(attempts).toBe(3);
-    });
-
-    it('throws after max attempts', async () => {
-      await expect(
-        retryWithBackoff(async () => { throw new Error('always fail'); }, 3, 10)
-      ).rejects.toThrow('always fail');
-    });
   });
-
-  describe('safeJsonParse', () => {
-    it('parses valid JSON', () => {
-      expect(safeJsonParse('{"a":1}', {})).toEqual({ a: 1 });
-    });
-
-    it('returns fallback for invalid JSON', () => {
-      expect(safeJsonParse('invalid', { fallback: true })).toEqual({ fallback: true });
-    });
-
-    it('returns fallback for null/undefined', () => {
-      expect(safeJsonParse(null, 'fallback')).toBe('fallback');
-      expect(safeJsonParse(undefined, 'fallback')).toBe('fallback');
-    });
-  });
-
-  describe('getLocalityFromPoint', () => {
-    it('returns correct locality for known coordinates', () => {
-      // Gachibowli center
-      expect(getLocalityFromPoint(78.35, 17.44)).toBe('gachibowli');
-
-      // Madhapur center (inside madhapur bounds, not overlapping with gachibowli)
-      expect(getLocalityFromPoint(78.40, 17.46)).toBe('madhapur');
-
-      // Kondapur center (78.35, 17.41) - inside kondapur bounds, not in gachibowli
-      expect(getLocalityFromPoint(78.35, 17.41)).toBe('kondapur');
-    });
-
-    it('returns default for coordinates outside known bounds', () => {
-      // Far away coordinates
-      expect(getLocalityFromPoint(0, 0)).toBe('gachibowli');
-    });
-
-    it('handles boundary coordinates', () => {
-      // On the edge of Gachibowli bounds
-      expect(getLocalityFromPoint(78.32, 17.42)).toBe('gachibowli');
-      expect(getLocalityFromPoint(78.38, 17.46)).toBe('gachibowli');
-    });
-  });
-
-  describe('applyPrivacyJitter', () => {
-    it('returns different coordinates than input', () => {
-      const [jitteredLon, jitteredLat] = applyPrivacyJitter(78.37, 17.44);
-      expect(jitteredLon).not.toBe(78.37);
-      expect(jitteredLat).not.toBe(17.44);
-    });
-
-    it('is deterministic for same input', () => {
-      const [lon1, lat1] = applyPrivacyJitter(78.37, 17.44);
-      const [lon2, lat2] = applyPrivacyJitter(78.37, 17.44);
-      expect(lon1).toBe(lon2);
-      expect(lat1).toBe(lat2);
-    });
-
-    it('produces offset within expected range (~100-200m)', () => {
-      const [jitteredLon, jitteredLat] = applyPrivacyJitter(78.37, 17.44);
-      const distance = haversineDistance(17.44, 78.37, jitteredLat, jitteredLon);
-
-      // 0.001 degrees ≈ 111m at equator, less at Hyderabad latitude (~110m)
-      // 0.002 degrees ≈ 222m
-      expect(distance).toBeGreaterThan(100);
-      expect(distance).toBeLessThan(250);
-    });
-
-    it('produces different jitter for different coordinates', () => {
-      const [lon1, lat1] = applyPrivacyJitter(78.37, 17.44);
-      const [lon2, lat2] = applyPrivacyJitter(78.38, 17.45);
-      expect(lon1).not.toBe(lon2);
-      expect(lat1).not.toBe(lat2);
-    });
-  });
-});

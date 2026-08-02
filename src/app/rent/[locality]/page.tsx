@@ -3,7 +3,7 @@
 
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getLocalityStats, getCityStats, getAllLocalityStats } from '@/lib/aggregates';
+import { getLocalityStats } from '@/lib/aggregates';
 import { formatINR, formatRentRange } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -83,33 +83,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const bhkBreakdown: Record<string, number> = {};
-  // Note: We'd need a more detailed query for BHK breakdown
-
   return {
-    title: `${meta.name} Rentals | Flats & Flatmates | Median ${formatINR(stats.medianRent)}/mo | hyderabad.rent`,
-    description: `${meta.description} ${stats.totalListings} verified listings. Median rent ${formatINR(stats.medianRent)}/mo. Zero brokerage.`,
-    openGraph: {
-      title: `${meta.name} Rentals | hyderabad.rent`,
-      description: `${stats.totalListings} verified listings. Median ${formatINR(stats.medianRent)}/mo.`,
-      type: 'website',
-    },
-    other: {
-      'json-ld': JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'Place',
-        name: `${meta.name}, Hyderabad`,
-        containedInPlace: {
-          '@type': 'City',
-          name: 'Hyderabad',
-        },
-        geo: {
-          '@type': 'GeoCoordinates',
-          latitude: 17.44,
-          longitude: 78.38,
-        },
-      }),
-    },
   };
 }
 
@@ -117,7 +91,6 @@ export default async function LocalityPage({ params }: PageProps) {
   const { locality } = await params;
   const meta = LOCALITY_META[locality];
   const stats = await getLocalityStats(locality);
-  const cityStats = await getCityStats();
 
   // Check if should be indexed (20+ data points gate)
   const shouldIndex = stats && stats.sampleSize >= 20;

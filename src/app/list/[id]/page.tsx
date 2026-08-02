@@ -218,7 +218,7 @@ function ListingDetail({ listing }: { listing: Awaited<ReturnType<typeof getList
                   Post Seeker Request
                 </Link>
                 <ShareButtons
-                  pin={{
+                  contentOrPin={{
                     id: listing.id,
                     type: 'listing',
                     locality: listing.locality,

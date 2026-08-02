@@ -34,13 +34,6 @@ export const metadata: Metadata = {
   },
 };
 
-const BHk_LABEL: Record<string, string> = {
-  '1BHK': '1 BHK',
-  '2BHK': '2 BHK',
-  '3BHK': '3 BHK',
-  '4+BHK': '4+ BHK',
-};
-
 const LOCALITY_DISPLAY: Record<string, { name: string; metro?: string }> = {
   gachibowli: { name: 'Gachibowli', metro: 'Blue Line' },
   madhapur: { name: 'Madhapur', metro: 'Blue Line' },

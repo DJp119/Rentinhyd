@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { reportSubmitSchema, reportResponseSchema } from '@/lib/schemas';
 import { logger } from '@/lib/observability';
-import { verifyTurnstileToken, hashEmail } from '@/lib/security';
+import { verifyTurnstileToken } from '@/lib/security';
 import { generateRequestFingerprint } from '@/lib/utils';
 import { logAuditEvent } from '@/lib/supabase';
 import { logError } from '@/lib/observability';

@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { SeekerForm } from '@/components/forms/SeekerForm';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import type { SeekerSubmit } from '@/lib/schemas';
 
 export default function NewSeekerPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (data: SeekerSubmit) => {
-    setIsSubmitting(true);
     try {
       const response = await fetch('/api/seekers', {
         method: 'POST',
@@ -32,8 +29,6 @@ export default function NewSeekerPage() {
       }
     } catch (err) {
       toast.error('Network error', { description: 'Please try again' });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

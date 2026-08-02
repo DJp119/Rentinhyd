@@ -321,6 +321,7 @@ export function MapComponent({
     <div
       className={`relative w-full h-full ${className}`}
       style={{ minHeight: '400px', backgroundColor: '#0D0D0D' }}
+      data-testid="map-container"
     >
       <div ref={mapContainer} className="absolute inset-0" />
       {!mapsLoaded && !error && (
@@ -377,7 +378,7 @@ export function PinBottomSheet({ pin, onClose, onAction }: PinBottomSheetProps) 
     : formatRentRange(pin.rentMin || 0, pin.rentMax || 0);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-up">
+    <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-up" data-testid="pin-bottom-sheet">
       <div className="bg-backgroundElevated border-t border-border rounded-t-xl p-4 md:p-6 max-h-[85vh] overflow-y-auto">
         {/* Handle */}
         <div className="w-10 h-1 bg-border mx-auto rounded-full mb-4" />

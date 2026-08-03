@@ -23,9 +23,10 @@ const LOCALITY_OPTIONS = [
   { value: 'hafeezpet', label: 'Hafeezpet' },
 ] as const;
 
-export function SeekerForm({ onSubmit, onCancel }: {
+export function SeekerForm({ onSubmit, onCancel, initialLocality }: {
   onSubmit: (data: SeekerSubmit) => Promise<void>;
   onCancel: () => void;
+  initialLocality?: string;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
@@ -40,7 +41,7 @@ export function SeekerForm({ onSubmit, onCancel }: {
     defaultValues: {
       listingType: 'whole_flat',
       furnishing: undefined,
-      preferredLocalities: [],
+      preferredLocalities: initialLocality ? [initialLocality] : [],
       excludedLocalities: [],
       lifestylePrefs: {},
     },
@@ -195,9 +196,16 @@ export function SeekerForm({ onSubmit, onCancel }: {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-textSecondary mb-2">
-              Preferred localities (select multiple)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-textSecondary">
+                Preferred localities
+              </label>
+              {initialLocality && (
+                <span className="text-xs text-accent bg-accent/10 px-2 py-0.5 rounded-full font-medium">
+                  Starting area selected from the map
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {LOCALITY_OPTIONS.map(loc => (
                 <label key={loc.value} className={cn(

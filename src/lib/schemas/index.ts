@@ -48,22 +48,63 @@ export const mapQuerySchema = z.object({
 
 export type MapQuery = z.infer<typeof mapQuerySchema>;
 
-export const mapPinSchema = z.object({
-  id: uuidSchema,
-  type: z.enum(['rent_pin', 'listing']),
-  geom: pointSchema,
-  rentMin: rentSchema.optional(),
-  rentMax: rentSchema.optional(),
-  rent: rentSchema.optional(),
-  bhk: bhkSchema,
-  furnishing: furnishingSchema,
-  listingType: listingTypeSchema.optional(),
-  locality: localitySchema,
-  // Pins only
-  pinCount: z.number().int().optional(), // for clusters
-});
+export const mapPinSchema = z.discriminatedUnion('type', [
+  z.object({
+    id: uuidSchema,
+    type: z.literal('rent_pin'),
+    geom: pointSchema,
+    rentMin: rentSchema,
+    rentMax: rentSchema,
+    bhk: bhkSchema,
+    furnishing: furnishingSchema,
+    locality: localitySchema,
+    pinCount: z.number().int().optional(),
+  }),
+  z.object({
+    id: uuidSchema,
+    type: z.literal('listing'),
+    geom: pointSchema,
+    rent: rentSchema,
+    bhk: bhkSchema,
+    furnishing: furnishingSchema,
+    listingType: listingTypeSchema,
+    locality: localitySchema,
+  }),
+  z.object({
+    id: uuidSchema,
+    type: z.literal('tolet_board'),
+    geom: pointSchema,
+    locality: localitySchema,
+  }),
+]);
 
 export type MapPin = z.infer<typeof mapPinSchema>;
+
+export const toLetBoardSubmitSchema = z.object({
+  lon: lonSchema,
+  lat: latSchema,
+  phone: phoneSchema,
+  locality: localitySchema,
+  imageMetadata: z.object({
+    name: z.string().min(1),
+    size: z.number().int().max(5 * 1024 * 1024), // 5MB
+    type: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  }),
+  turnstileToken: z.string().min(1, 'Turnstile token required'),
+  consent: z.boolean().refine(v => v === true, {
+    message: 'You must confirm visibility consent',
+  }),
+});
+
+export type ToLetBoardSubmit = z.infer<typeof toLetBoardSubmitSchema>;
+
+export const toLetBoardResponseSchema = z.object({
+  id: uuidSchema,
+  status: z.enum(['pending', 'approved', 'quarantined', 'deleted']),
+  message: z.string(),
+});
+
+export type ToLetBoardResponse = z.infer<typeof toLetBoardResponseSchema>;
 
 export const mapResponseSchema = z.object({
   items: z.array(mapPinSchema),
@@ -328,7 +369,7 @@ export type MatchDigestItem = z.infer<typeof matchDigestItemSchema>;
 // ============================================
 
 export const reportSubmitSchema = z.object({
-  targetType: z.enum(['rent_pin', 'listing', 'seeker', 'match']),
+  targetType: z.enum(['rent_pin', 'listing', 'seeker', 'match', 'tolet_board']),
   targetId: uuidSchema,
   reason: z.enum(['fake', 'broker', 'scam', 'inappropriate', 'other']),
   description: z.string().min(10).max(2000).optional(),
@@ -463,6 +504,7 @@ export const schemas = {
   reportSubmit: reportSubmitSchema,
   resendWebhook: resendWebhookSchema,
   statsQuery: statsQuerySchema,
+  toLetBoardSubmit: toLetBoardSubmitSchema,
 } as const;
 
 export type SchemaKey = keyof typeof schemas;

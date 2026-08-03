@@ -8,7 +8,9 @@ import { useForm } from 'react-hook-form';
 import { listingSubmitSchema, type ListingSubmit } from '@/lib/schemas';
 import { cn } from '@/lib/utils';
 
-const BHk_OPTIONS = ['1BHK', '2BHK', '3BHK', '4+BHK', 'room'] as const;
+import type { MapLocation } from '../Map';
+
+const BHK_OPTIONS = ['1BHK', '2BHK', '3BHK', '4+BHK', 'room'] as const;
 const FURNISHING_OPTIONS = ['unfurnished', 'semi_furnished', 'fully_furnished'] as const;
 const LISTING_TYPES = ['whole_flat', 'room_flatmate'] as const;
 
@@ -19,9 +21,10 @@ const AMENITY_OPTIONS = [
   'Gym', 'Pool', 'Clubhouse', 'Garden', 'Rooftop',
 ] as const;
 
-export function ListingForm({ onSubmit, onCancel }: {
+export function ListingForm({ onSubmit, onCancel, initialLocation }: {
   onSubmit: (data: ListingSubmit) => Promise<void>;
   onCancel: () => void;
+  initialLocation?: MapLocation;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
@@ -41,6 +44,9 @@ export function ListingForm({ onSubmit, onCancel }: {
       amenities: [],
       lifestylePrefs: {},
       contactMethod: 'email',
+      locality: initialLocation?.locality || '',
+      lat: initialLocation?.lat,
+      lon: initialLocation?.lon,
     },
   });
 
@@ -147,7 +153,7 @@ export function ListingForm({ onSubmit, onCancel }: {
               className={cn('w-full input-field', errors.bhk && 'border-error')}
             >
               <option value="">Select BHK</option>
-              {BHk_OPTIONS.map(opt => (
+              {BHK_OPTIONS.map(opt => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>

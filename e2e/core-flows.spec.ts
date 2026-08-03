@@ -26,15 +26,20 @@ test.describe('Core User Flows', () => {
       // Wait for map to load
       await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 });
 
-      // Open pin submission modal (test: right-click or click pin button)
-      await page.click('[data-testid="add-pin-button"]');
+      // Accept consent if shown
+      const acceptBtn = page.locator('[data-testid="consent-accept"]');
+      if (await acceptBtn.isVisible()) {
+        await acceptBtn.click();
+      }
+
+      // Open pin submission modal via map tap
+      await page.click('[data-testid="map-container"]', { position: { x: 300, y: 300 } });
+      await page.click('[data-testid="action-rent"]');
 
       // Fill pin form
       await page.fill('[data-testid="pin-locality"]', 'gachibowli');
       await page.fill('[data-testid="pin-rent-min"]', '20000');
       await page.fill('[data-testid="pin-rent-max"]', '30000');
-      await page.selectOption('[data-testid="pin-bhk"]', '2BHK');
-      await page.selectOption('[data-testid="pin-furnishing"]', 'semi_furnished');
 
       // Handle Turnstile (in test env, may be bypassed or use test key)
       await page.waitForTimeout(1000);
@@ -49,13 +54,18 @@ test.describe('Core User Flows', () => {
     test('rejects invalid rent pin (rentMin > rentMax)', async ({ page }) => {
       await page.goto(`${baseURL}/map`);
       await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 });
-      await page.click('[data-testid="add-pin-button"]');
+
+      const acceptBtn = page.locator('[data-testid="consent-accept"]');
+      if (await acceptBtn.isVisible()) {
+        await acceptBtn.click();
+      }
+
+      await page.click('[data-testid="map-container"]', { position: { x: 300, y: 300 } });
+      await page.click('[data-testid="action-rent"]');
 
       await page.fill('[data-testid="pin-locality"]', 'gachibowli');
       await page.fill('[data-testid="pin-rent-min"]', '35000');
       await page.fill('[data-testid="pin-rent-max"]', '25000');
-      await page.selectOption('[data-testid="pin-bhk"]', '2BHK');
-      await page.selectOption('[data-testid="pin-furnishing"]', 'semi_furnished');
 
       await page.click('[data-testid="pin-submit"]');
 

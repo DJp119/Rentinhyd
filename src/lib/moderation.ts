@@ -9,7 +9,7 @@ export type ModerationAction = 'quarantine' | 'approve' | 'ban' | 'delete' | 'wa
 
 export interface ModerationDecision {
   id: string;
-  targetType: 'rent_pin' | 'listing' | 'seeker' | 'user';
+  targetType: 'rent_pin' | 'listing' | 'seeker' | 'user' | 'tolet_board';
   targetId: string;
   action: ModerationAction;
   reason?: string;
@@ -149,7 +149,7 @@ export async function banUser(
 }
 
 export async function deleteContent(
-  targetType: 'rent_pin' | 'listing' | 'seeker',
+  targetType: 'rent_pin' | 'listing' | 'seeker' | 'tolet_board',
   targetId: string,
   adminId: string,
   reason: string
@@ -166,6 +166,14 @@ export async function deleteContent(
     case 'seeker':
       await supabase.from('seek_requests').update({ status: 'expired' }).eq('id', targetId);
       break;
+    case 'tolet_board': {
+      const { data: board } = await supabase.from('tolet_boards').select('image_path').eq('id', targetId).single();
+      await supabase.from('tolet_boards').update({ status: 'quarantined' }).eq('id', targetId);
+      if (board?.image_path) {
+        await supabase.storage.from('tolet-boards').remove([board.image_path]);
+      }
+      break;
+    }
   }
 
   await recordModerationDecision({
@@ -210,6 +218,88 @@ export async function warnUser(
   });
 
   logger.info('moderation.user_warned', { userId, adminId });
+  return { success: true };
+}
+
+export async function approveToLetBoard(
+  boardId: string,
+  adminId: string,
+  reason?: string
+): Promise<{ success: boolean; error?: string }> {
+  const { data: board } = await supabase
+    .from('tolet_boards')
+    .select('*')
+    .eq('id', boardId)
+    .single();
+
+  if (!board) return { success: false, error: 'To-Let board not found' };
+
+  const { error } = await supabase
+    .from('tolet_boards')
+    .update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: adminId })
+    .eq('id', boardId);
+
+  if (error) return { success: false, error: error.message };
+
+  await recordModerationDecision({
+    targetType: 'tolet_board',
+    targetId: boardId,
+    action: 'approve',
+    reason,
+    previousState: { status: board.status },
+    decidedBy: adminId,
+  });
+
+  await supabase
+    .from('reports')
+    .update({ status: 'resolved', reviewed_at: new Date().toISOString(), reviewed_by: adminId, moderation_action: 'approve' })
+    .eq('target_type', 'tolet_board')
+    .eq('target_id', boardId)
+    .eq('status', 'pending');
+
+  logger.info('moderation.tolet_board_approved', { boardId, adminId });
+  return { success: true };
+}
+
+export async function quarantineToLetBoard(
+  boardId: string,
+  adminId: string,
+  reason: string,
+  evidence?: Record<string, unknown>
+): Promise<{ success: boolean; error?: string }> {
+  const { data: board } = await supabase
+    .from('tolet_boards')
+    .select('*')
+    .eq('id', boardId)
+    .single();
+
+  if (!board) return { success: false, error: 'To-Let board not found' };
+
+  const { error: updateError } = await supabase
+    .from('tolet_boards')
+    .update({ status: 'quarantined' })
+    .eq('id', boardId);
+
+  if (updateError) return { success: false, error: updateError.message };
+
+  await recordModerationDecision({
+    targetType: 'tolet_board',
+    targetId: boardId,
+    action: 'quarantine',
+    reason,
+    evidence,
+    previousState: { status: board.status },
+    decidedBy: adminId,
+  });
+
+  await supabase
+    .from('reports')
+    .update({ status: 'resolved', reviewed_at: new Date().toISOString(), reviewed_by: adminId, moderation_action: 'quarantine' })
+    .eq('target_type', 'tolet_board')
+    .eq('target_id', boardId)
+    .eq('status', 'pending');
+
+  logger.info('moderation.tolet_board_quarantined', { boardId, adminId });
   return { success: true };
 }
 
@@ -293,6 +383,13 @@ export async function getPendingReports(limit = 50, offset = 0): Promise<ReportW
           .eq('id', report.target_id)
           .single();
         targetPreview = pin || {};
+      } else if (report.target_type === 'tolet_board') {
+        const { data: board } = await supabase
+          .from('tolet_boards')
+          .select('id, locality, status')
+          .eq('id', report.target_id)
+          .single();
+        targetPreview = board || {};
       }
     } catch {
       // Ignore enrichment errors
@@ -334,7 +431,7 @@ interface AbuseCheckResult {
 export async function checkAbuseOnSubmit(params: {
   ipFingerprintHash: string;
   emailHash: string;
-  targetType: 'rent_pin' | 'listing' | 'seeker';
+  targetType: 'rent_pin' | 'listing' | 'seeker' | 'tolet_board';
   content?: Record<string, unknown>;
 }): Promise<AbuseCheckResult> {
   const reasons: string[] = [];

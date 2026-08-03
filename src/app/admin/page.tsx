@@ -34,6 +34,7 @@ export default async function AdminPage() {
             <nav className="hidden md:flex items-center gap-4">
               <Link href="/admin" className="text-sm text-accent font-medium">Dashboard</Link>
               <Link href="/admin/listings" className="text-sm text-textSecondary hover:text-textPrimary">Listings</Link>
+              <Link href="/admin/tolet-boards" className="text-sm text-textSecondary hover:text-textPrimary">To-Let Boards</Link>
               <Link href="/admin/reports" className="text-sm text-textSecondary hover:text-textPrimary">Reports</Link>
               <Link href="/admin/users" className="text-sm text-textSecondary hover:text-textPrimary">Users</Link>
               <Link href="/admin/audit" className="text-sm text-textSecondary hover:text-textPrimary">Audit Log</Link>
@@ -110,6 +111,13 @@ export default async function AdminPage() {
                   href="/admin/listings?status=pending"
                   icon="📋"
                   color="accent"
+                />
+                <ActionCard
+                  title="To-Let Boards"
+                  description="Review user reported To-Let boards"
+                  href="/admin/tolet-boards"
+                  icon="🪧"
+                  color="info"
                 />
                 <ActionCard
                   title="Pending Reports"

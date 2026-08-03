@@ -90,6 +90,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Query To-Let boards
+    const { data: toletBoards } = await supabase
+      .rpc('get_tolet_boards_in_bbox', {
+        min_lon: minLon,
+        min_lat: minLat,
+        max_lon: maxLon,
+        max_lat: maxLat,
+      });
+
     // Apply filters
     let filteredPins = pins || [];
     let filteredListings = listings || [];
@@ -142,6 +151,12 @@ export async function GET(request: NextRequest) {
         furnishing: l.furnishing,
         listingType: l.listing_type,
         locality: l.locality,
+      }))),
+      ...((toletBoards || []).map((t: { id: string; longitude: number; latitude: number; locality: string }) => ({
+        id: t.id,
+        type: 'tolet_board' as const,
+        geom: { type: 'Point' as const, coordinates: [t.longitude, t.latitude] },
+        locality: t.locality,
       }))),
     ];
 

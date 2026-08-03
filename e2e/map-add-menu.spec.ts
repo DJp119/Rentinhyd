@@ -1,0 +1,121 @@
+// e2e/map-add-menu.spec.ts
+// End-to-end tests for the Map Tap "Add Something Here" flow
+
+import { test, expect } from '@playwright/test';
+
+test.describe('Map Tap Add Something Here Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    // Clear localStorage to test consent
+    await page.goto('/map');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+  });
+
+  test('consent modal blocks map actions before acceptance', async ({ page }) => {
+    // Modal should be visible
+    const modal = page.locator('[data-testid="consent-modal"]');
+    await expect(modal).toBeVisible();
+
+    // Accept consent
+    const acceptBtn = page.locator('[data-testid="consent-accept"]');
+    await acceptBtn.click();
+    await expect(modal).toBeHidden();
+  });
+
+  test('empty map click opens MapAddMenu with all four actions', async ({ page }) => {
+    // Accept consent first
+    const acceptBtn = page.locator('[data-testid="consent-accept"]');
+    if (await acceptBtn.isVisible()) {
+      await acceptBtn.click();
+    }
+
+    // Click map container
+    const mapContainer = page.locator('[data-testid="map-container"]');
+    await expect(mapContainer).toBeVisible();
+    await mapContainer.click({ position: { x: 300, y: 300 } });
+
+    // MapAddMenu should open
+    const addMenu = page.locator('[data-testid="map-add-menu"]');
+    await expect(addMenu).toBeVisible();
+
+    // Verify all four action buttons
+    await expect(page.locator('[data-testid="action-rent"]')).toBeVisible();
+    await expect(page.locator('[data-testid="action-list"]')).toBeVisible();
+    await expect(page.locator('[data-testid="action-seek"]')).toBeVisible();
+    await expect(page.locator('[data-testid="action-tolet"]')).toBeVisible();
+  });
+
+  test('Rent action opens RentPinForm', async ({ page }) => {
+    const acceptBtn = page.locator('[data-testid="consent-accept"]');
+    if (await acceptBtn.isVisible()) await acceptBtn.click();
+
+    const mapContainer = page.locator('[data-testid="map-container"]');
+    await mapContainer.click({ position: { x: 300, y: 300 } });
+
+    await page.locator('[data-testid="action-rent"]').click();
+
+    // Rent form should be visible
+    const rentForm = page.locator('[data-testid="rent-pin-form"]');
+    await expect(rentForm).toBeVisible();
+    await expect(page.locator('[data-testid="pin-locality"]')).toBeVisible();
+    await expect(page.locator('[data-testid="pin-submit"]')).toBeVisible();
+  });
+
+  test('List action opens ListingForm', async ({ page }) => {
+    const acceptBtn = page.locator('[data-testid="consent-accept"]');
+    if (await acceptBtn.isVisible()) await acceptBtn.click();
+
+    const mapContainer = page.locator('[data-testid="map-container"]');
+    await mapContainer.click({ position: { x: 300, y: 300 } });
+
+    await page.locator('[data-testid="action-list"]').click();
+
+    // Listing form should open
+    await expect(page.locator('text=List Your Property')).toBeVisible();
+  });
+
+  test('Seek action preselects clicked locality', async ({ page }) => {
+    const acceptBtn = page.locator('[data-testid="consent-accept"]');
+    if (await acceptBtn.isVisible()) await acceptBtn.click();
+
+    const mapContainer = page.locator('[data-testid="map-container"]');
+    await mapContainer.click({ position: { x: 300, y: 300 } });
+
+    await page.locator('[data-testid="action-seek"]').click();
+
+    // Seeker form should open
+    await expect(page.locator('text=Find Your Place')).toBeVisible();
+  });
+
+  test('To-Let action opens ToLetBoardForm', async ({ page }) => {
+    const acceptBtn = page.locator('[data-testid="consent-accept"]');
+    if (await acceptBtn.isVisible()) await acceptBtn.click();
+
+    const mapContainer = page.locator('[data-testid="map-container"]');
+    await mapContainer.click({ position: { x: 300, y: 300 } });
+
+    await page.locator('[data-testid="action-tolet"]').click();
+
+    // To-Let form should open
+    const toletForm = page.locator('[data-testid="tolet-board-form"]');
+    await expect(toletForm).toBeVisible();
+    await expect(page.locator('[data-testid="tolet-photo-input"]')).toBeAttached();
+    await expect(page.locator('[data-testid="tolet-phone-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="tolet-submit-button"]')).toBeVisible();
+  });
+
+  test('closing the popup restores the map', async ({ page }) => {
+    const acceptBtn = page.locator('[data-testid="consent-accept"]');
+    if (await acceptBtn.isVisible()) await acceptBtn.click();
+
+    const mapContainer = page.locator('[data-testid="map-container"]');
+    await mapContainer.click({ position: { x: 300, y: 300 } });
+
+    const addMenu = page.locator('[data-testid="map-add-menu"]');
+    await expect(addMenu).toBeVisible();
+
+    // Click close
+    await page.locator('[data-testid="add-menu-close"]').click();
+    await expect(addMenu).toBeHidden();
+  });
+});

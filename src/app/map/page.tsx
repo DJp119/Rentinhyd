@@ -3,23 +3,70 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { MapComponent, PinBottomSheet, MapPin } from '@/components/Map';
+import { useState, useCallback } from 'react';
+import { MapComponent, PinBottomSheet, MapPin, MapLocation } from '@/components/Map';
+import { MapAddMenu } from '@/components/MapAddMenu';
 import { ListingForm } from '@/components/forms/ListingForm';
 import { SeekerForm } from '@/components/forms/SeekerForm';
-import { ListingSubmit, SeekerSubmit } from '@/lib/schemas';
+import { RentPinForm } from '@/components/forms/RentPinForm';
+import { ToLetBoardForm } from '@/components/forms/ToLetBoardForm';
+import { ToLetBoardSheet } from '@/components/ToLetBoardSheet';
+import { ListingSubmit, SeekerSubmit, RentPinSubmit } from '@/lib/schemas';
 import { ConsentModal } from '@/components/ConsentModal';
 
 export default function MapPage() {
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
+  const [selectedToLetId, setSelectedToLetId] = useState<string | null>(null);
   const [showListForm, setShowListForm] = useState(false);
   const [showSeekForm, setShowSeekForm] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  const handlePinClick = (pin: MapPin) => {
-    if (consentGiven) setSelectedPin(pin);
-  };
+  // States for Map Tap flow
+  const [mapLocation, setMapLocation] = useState<MapLocation | null>(null);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showRentForm, setShowRentForm] = useState(false);
+  const [showToLetForm, setShowToLetForm] = useState(false);
+
+  const handlePinClick = useCallback((pin: MapPin) => {
+    if (!consentGiven) return;
+    if (pin.type === 'tolet_board') {
+      setSelectedToLetId(pin.id);
+    } else {
+      setSelectedPin(pin);
+    }
+  }, [consentGiven]);
+
+  const handleMapClick = useCallback((location: MapLocation) => {
+    if (!consentGiven) return;
+    setMapLocation(location);
+    setShowAddMenu(true);
+  }, [consentGiven]);
+
+  const handleAddRent = useCallback(() => {
+    setShowAddMenu(false);
+    setShowRentForm(true);
+  }, []);
+
+  const handleAddListing = useCallback(() => {
+    setShowAddMenu(false);
+    setShowListForm(true);
+  }, []);
+
+  const handleAddSeeker = useCallback(() => {
+    setShowAddMenu(false);
+    setShowSeekForm(true);
+  }, []);
+
+  const handleAddToLet = useCallback(() => {
+    setShowAddMenu(false);
+    setShowToLetForm(true);
+  }, []);
+
+  const handleCloseAddMenu = useCallback(() => {
+    setShowAddMenu(false);
+    setMapLocation(null);
+  }, []);
 
   const handleShareMap = async () => {
     const url = window.location.href;
@@ -28,7 +75,7 @@ export default function MapPage() {
         await navigator.share({ title: 'hyderabad.rent — Rental Map', url });
         return;
       } catch {
-        // User cancelled or share failed, fall through to clipboard
+        // User cancelled or share failed
       }
     }
     try {
@@ -40,8 +87,25 @@ export default function MapPage() {
     }
   };
 
-  const handleCloseSheet = () => {
+  const handleCloseSheet = useCallback(() => {
     setSelectedPin(null);
+    setSelectedToLetId(null);
+  }, []);
+
+  const handleRentSubmit = async (data: RentPinSubmit) => {
+    const response = await fetch('/api/rent-pins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (result.id) {
+      setShowRentForm(false);
+      setMapLocation(null);
+      alert('Rent pin submitted! It will appear on the map after moderation.');
+    } else {
+      alert(result.error || 'Failed to submit rent pin');
+    }
   };
 
   const handleListSubmit = async (data: ListingSubmit) => {
@@ -53,6 +117,7 @@ export default function MapPage() {
     const result = await response.json();
     if (result.id) {
       setShowListForm(false);
+      setMapLocation(null);
       alert('Listing submitted! Please check your email to verify.');
     } else {
       alert(result.error || 'Failed to submit listing');
@@ -68,10 +133,17 @@ export default function MapPage() {
     const result = await response.json();
     if (result.id) {
       setShowSeekForm(false);
+      setMapLocation(null);
       alert('Search submitted! Please check your email to verify.');
     } else {
       alert(result.error || 'Failed to submit search');
     }
+  };
+
+  const handleToLetSuccess = () => {
+    setShowToLetForm(false);
+    setMapLocation(null);
+    alert('To-Let board submitted for moderation!');
   };
 
   return (
@@ -131,6 +203,7 @@ export default function MapPage() {
       <main className="relative pt-16 h-[calc(100vh-4rem)]">
         <MapComponent
           onPinClick={handlePinClick}
+          onMapClick={handleMapClick}
           className="w-full h-full"
         />
 
@@ -165,21 +238,92 @@ export default function MapPage() {
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#4FC3F7' }}></span>
               <span className="text-textSecondary">Rooms</span>
             </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#9C27B0' }}></span>
+              <span className="text-textSecondary">To-Let Boards</span>
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Pin Bottom Sheet */}
+      {/* Map Add Menu */}
+      {showAddMenu && (
+        <MapAddMenu
+          location={mapLocation}
+          onClose={handleCloseAddMenu}
+          onRent={handleAddRent}
+          onList={handleAddListing}
+          onSeek={handleAddSeeker}
+          onToLet={handleAddToLet}
+        />
+      )}
+
+      {/* Rent Pin Form Modal */}
+      {showRentForm && mapLocation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay">
+          <div className="bg-backgroundElevated border border-border rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-slide-up p-6">
+            <div className="border-b border-border pb-4 mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-textPrimary">💰 What rent are you paying?</h2>
+              <button
+                onClick={() => { setShowRentForm(false); setMapLocation(null); }}
+                className="p-2 text-textMuted hover:text-textPrimary transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <RentPinForm
+              location={mapLocation}
+              onSubmit={handleRentSubmit}
+              onCancel={() => { setShowRentForm(false); setMapLocation(null); }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* To-Let Board Form Modal */}
+      {showToLetForm && mapLocation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay">
+          <div className="bg-backgroundElevated border border-border rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-slide-up p-6">
+            <div className="border-b border-border pb-4 mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-textPrimary">🪧 Spotted a To-Let board?</h2>
+              <button
+                onClick={() => { setShowToLetForm(false); setMapLocation(null); }}
+                className="p-2 text-textMuted hover:text-textPrimary transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <ToLetBoardForm
+              location={mapLocation}
+              onSuccess={handleToLetSuccess}
+              onCancel={() => { setShowToLetForm(false); setMapLocation(null); }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Pin Bottom Sheet (Rent pins / Listings) */}
       <PinBottomSheet
         pin={selectedPin}
         onClose={handleCloseSheet}
         onAction={(action) => {
           if (action === 'view') {
-            // Navigate to listing detail
             window.location.href = `/list/${selectedPin?.id}`;
           }
         }}
       />
+
+      {/* To-Let Board Detail Sheet */}
+      {selectedToLetId && (
+        <ToLetBoardSheet
+          id={selectedToLetId}
+          onClose={handleCloseSheet}
+        />
+      )}
 
       {/* Consent Modal */}
       <ConsentModal onAccept={() => setConsentGiven(true)} />
@@ -191,7 +335,7 @@ export default function MapPage() {
             <div className="p-6 border-b border-border flex items-center justify-between">
               <h2 className="text-xl font-semibold text-textPrimary">List Your Property</h2>
               <button
-                onClick={() => setShowListForm(false)}
+                onClick={() => { setShowListForm(false); setMapLocation(null); }}
                 className="p-2 text-textMuted hover:text-textPrimary transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +344,11 @@ export default function MapPage() {
               </button>
             </div>
             <div className="p-6">
-              <ListingForm onSubmit={handleListSubmit} onCancel={() => setShowListForm(false)} />
+              <ListingForm
+                initialLocation={mapLocation ?? undefined}
+                onSubmit={handleListSubmit}
+                onCancel={() => { setShowListForm(false); setMapLocation(null); }}
+              />
             </div>
           </div>
         </div>
@@ -213,7 +361,7 @@ export default function MapPage() {
             <div className="p-6 border-b border-border flex items-center justify-between">
               <h2 className="text-xl font-semibold text-textPrimary">Find Your Place</h2>
               <button
-                onClick={() => setShowSeekForm(false)}
+                onClick={() => { setShowSeekForm(false); setMapLocation(null); }}
                 className="p-2 text-textMuted hover:text-textPrimary transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +370,11 @@ export default function MapPage() {
               </button>
             </div>
             <div className="p-6">
-              <SeekerForm onSubmit={handleSeekSubmit} onCancel={() => setShowSeekForm(false)} />
+              <SeekerForm
+                initialLocality={mapLocation?.locality}
+                onSubmit={handleSeekSubmit}
+                onCancel={() => { setShowSeekForm(false); setMapLocation(null); }}
+              />
             </div>
           </div>
         </div>

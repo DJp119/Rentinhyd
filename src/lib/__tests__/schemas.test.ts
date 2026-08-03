@@ -56,6 +56,9 @@ import {
   // Schemas registry
   schemas,
   validateSchema,
+  toLetBoardSubmitSchema,
+  toLetBoardResponseSchema,
+  mapPinSchema,
   type SchemaKey,
 } from '../schemas';
 
@@ -112,6 +115,26 @@ describe('Zod Schema Validation', () => {
         bbox: '78.3,17.4,78.5,17.6',
         zoom: 13,
         minRent: -1000,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('validates tolet_board map pin item', () => {
+      const result = mapPinSchema.safeParse({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        type: 'tolet_board',
+        geom: { type: 'Point', coordinates: [78.37, 17.44] },
+        locality: 'gachibowli',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects malformed tolet_board map pin item', () => {
+      const result = mapPinSchema.safeParse({
+        id: 'invalid-uuid',
+        type: 'tolet_board',
+        geom: { type: 'Point', coordinates: [78.37, 17.44] },
+        locality: 'gachibowli',
       });
       expect(result.success).toBe(false);
     });
@@ -444,6 +467,14 @@ describe('Zod Schema Validation', () => {
       const result = reportSubmitSchema.safeParse(rest);
       expect(result.success).toBe(true);
     });
+
+    it('validates tolet_board report targetType', () => {
+      const result = reportSubmitSchema.safeParse({
+        ...validReport,
+        targetType: 'tolet_board',
+      });
+      expect(result.success).toBe(true);
+    });
   });
 
   describe('resendWebhookSchema', () => {
@@ -609,6 +640,50 @@ describe('Zod Schema Validation', () => {
       for (const key of Object.keys(validInputs) as SchemaKey[]) {
         expect(() => validateSchema(key, validInputs[key])).not.toThrow();
       }
+    });
+  });
+
+  describe('toLetBoardSubmitSchema', () => {
+    const validBoard = {
+      lat: 17.44,
+      lon: 78.37,
+      phone: '9876543210',
+      locality: 'gachibowli',
+      imageMetadata: {
+        name: 'board.jpg',
+        size: 2 * 1024 * 1024,
+        type: 'image/jpeg',
+      },
+      turnstileToken: 'valid-token',
+      consent: true,
+    };
+
+    it('validates valid To-Let submission', () => {
+      const result = toLetBoardSubmitSchema.safeParse(validBoard);
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects invalid phone number', () => {
+      const result = toLetBoardSubmitSchema.safeParse({ ...validBoard, phone: '12345' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid coordinates', () => {
+      const result = toLetBoardSubmitSchema.safeParse({ ...validBoard, lat: 10.0 });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid file metadata (too large)', () => {
+      const result = toLetBoardSubmitSchema.safeParse({
+        ...validBoard,
+        imageMetadata: { ...validBoard.imageMetadata, size: 6 * 1024 * 1024 },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects unconfirmed consent', () => {
+      const result = toLetBoardSubmitSchema.safeParse({ ...validBoard, consent: false });
+      expect(result.success).toBe(false);
     });
   });
 });

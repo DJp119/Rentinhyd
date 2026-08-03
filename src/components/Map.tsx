@@ -12,10 +12,17 @@ import { ShareButtons } from './ShareButtons';
 
 export type { MapPin };
 
+export type MapLocation = {
+  lat: number;
+  lon: number;
+  locality?: string;
+};
+
 interface MapProps {
   initialBounds?: [number, number, number, number];
   initialZoom?: number;
   onPinClick?: (pin: MapPin) => void;
+  onMapClick?: (location: MapLocation) => void;
   className?: string;
 }
 
@@ -50,6 +57,17 @@ function createPinSVG(type: PinType, rent?: number, rentMin?: number, rentMax?: 
     </svg>`;
   }
 
+  if (type === 'tolet_board') {
+    // To-Let Board pin: violet/purple color
+    const color = '#9C27B0';
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <path d="M18 2 C10.3 2 4 8.3 4 16 c0 6.5 5.5 12 14 20 8.5-8 14-13.5 14-20 C32 8.3 25.7 2 18 2 z" fill="${color}" stroke="#0D0D0D" stroke-width="${strokeWidth}"/>
+      <rect x="12" y="10" width="12" height="8" rx="1" fill="#F5F5F0" stroke="#0D0D0D" stroke-width="1"/>
+      <line x1="14" y1="13" x2="22" y2="13" stroke="#0D0D0D" stroke-width="1"/>
+      <line x1="14" y1="15" x2="20" y2="15" stroke="#0D0D0D" stroke-width="1"/>
+    </svg>`;
+  }
+
   // Listing: gold for whole_flat, blue for room_flatmate
   const color = listingType === 'whole_flat' ? '#E8A838' : '#4FC3F7';
   const icon = listingType === 'whole_flat'
@@ -65,6 +83,7 @@ export function MapComponent({
   initialBounds,
   initialZoom = DEFAULT_ZOOM,
   onPinClick,
+  onMapClick,
   className = '',
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -204,7 +223,11 @@ export function MapComponent({
     });
 
     const clickListener = map.addListener('click', (e: google.maps.MapMouseEvent) => {
-      if (!onPinClick) return;
+      if (!onMapClick || !e.latLng) return;
+      onMapClick({
+        lat: e.latLng.lat(),
+        lon: e.latLng.lng(),
+      });
     });
 
     return () => {
@@ -215,7 +238,7 @@ export function MapComponent({
       clustererRef.current = null;
       mapRef.current = null;
     };
-  }, [mapsLoaded, onPinClick]);
+  }, [mapsLoaded, onPinClick, onMapClick]);
 
   // Load pins for current viewport
   const loadPins = useCallback(async (bounds: google.maps.LatLngBounds | undefined, zoom: number) => {
@@ -261,11 +284,12 @@ export function MapComponent({
 
     // Remove old markers
     const oldMarkers = Array.from(markersRef.current.keys());
-    if (clusterer) {
-      oldMarkers.forEach(m => clusterer.removeMarker(m));
-    } else {
-      oldMarkers.forEach(m => { m.map = null; });
-    }
+    oldMarkers.forEach(m => {
+      m.map = null;
+      if (clusterer) {
+        clusterer.removeMarker(m);
+      }
+    });
     markersRef.current.clear();
 
     // Create new markers
@@ -275,20 +299,22 @@ export function MapComponent({
       const position = new google.maps.LatLng(item.geom.coordinates[1], item.geom.coordinates[0]);
       const svg = createPinSVG(
         item.type,
-        item.rent,
-        item.rentMin,
-        item.rentMax,
-        item.listingType,
-        item.pinCount
+        item.type === 'tolet_board' ? undefined : (item as any).rent,
+        item.type === 'tolet_board' ? undefined : (item as any).rentMin,
+        item.type === 'tolet_board' ? undefined : (item as any).rentMax,
+        item.type === 'tolet_board' ? undefined : (item as any).listingType,
+        item.type === 'tolet_board' ? undefined : (item as any).pinCount
       );
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position,
         map,
         content: createMarkerContent(svg),
-        title: item.type === 'rent_pin'
-          ? `Rent: ${formatRentRange(item.rentMin || 0, item.rentMax || 0)}`
-          : `Listing: ${formatINR(item.rent || 0)}`,
+        title: item.type === 'tolet_board'
+          ? 'To-Let board'
+          : item.type === 'rent_pin'
+            ? `Rent: ${formatRentRange((item as any).rentMin || 0, (item as any).rentMax || 0)}`
+            : `Listing: ${formatINR((item as any).rent || 0)}`,
       });
 
       (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = item;
@@ -299,7 +325,9 @@ export function MapComponent({
         }
       });
 
-      newMarkers.push(marker);
+      if (item.type !== 'tolet_board') {
+        newMarkers.push(marker);
+      }
       markersRef.current.set(marker, item);
     });
 
@@ -371,6 +399,7 @@ interface PinBottomSheetProps {
 
 export function PinBottomSheet({ pin, onClose, onAction }: PinBottomSheetProps) {
   if (!pin) return null;
+  if (pin.type === 'tolet_board') return null;
 
   const isListing = pin.type === 'listing';
   const rentDisplay = isListing

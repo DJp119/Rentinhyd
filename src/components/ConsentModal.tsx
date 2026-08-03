@@ -18,9 +18,11 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
       if (!consented) {
         console.log('[ConsentModal] No consent found, setting show=true');
         setShow(true);
+      } else {
+        onAccept();
       }
     }
-  }, []);
+  }, [onAccept]);
 
   console.log('[ConsentModal] render: mounted=', mounted, 'show=', show);
 
@@ -89,6 +91,7 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
                 </p>
                 <ul className="list-disc list-inside text-textSecondary space-y-1">
                   <li><strong>Anonymous rent pins:</strong> Location (jittered ~100-200m), rent range, BHK, furnishing type, locality. No personal identifiers.</li>
+                  <li><strong>To-Let Boards:</strong> Photos of public To-Let signboards and phone numbers. Verified via moderation before publication. Retention: 30 days.</li>
                   <li><strong>Listings (optional):</strong> Property details, contact preferences (stored separately with consent), photos you upload.</li>
                   <li><strong>Seeker requests (optional):</strong> Requirements, budget, preferred localities, contact preferences.</li>
                   <li><strong>Technical data:</strong> IP fingerprint (hashed), user agent, request timestamps for abuse prevention.</li>
@@ -98,7 +101,7 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
               <section>
                 <h4 className="font-semibold text-textPrimary">2. How We Use Your Data</h4>
                 <ul className="list-disc list-inside text-textSecondary space-y-1">
-                  <li>Display aggregated rent pins on the map (jittered for privacy)</li>
+                  <li>Display aggregated rent pins and approved To-Let boards on the map</li>
                   <li>Match seekers with listings via double-consent introduction</li>
                   <li>Prevent spam/abuse via rate limiting and fingerprinting</li>
                   <li>Send verification emails for listings/seeker requests</li>
@@ -109,8 +112,7 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
               <section>
                 <h4 className="font-semibold text-textPrimary">3. Data Sharing</h4>
                 <p className="text-textSecondary">
-                  We do <strong>not</strong> sell your data. Contact details are only shared after <strong>double-consent introduction</strong> (both parties agree).
-                  Aggregated, anonymized rent data may be published for market insights.
+                  We do <strong>not</strong> sell your data. Phone numbers on approved To-Let boards are published after moderation. Other contact details are only shared after <strong>double-consent introduction</strong>.
                 </p>
               </section>
 
@@ -118,6 +120,7 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
                 <h4 className="font-semibold text-textPrimary">4. Data Retention</h4>
                 <ul className="list-disc list-inside text-textSecondary space-y-1">
                   <li>Rent pins: 90 days (auto-expire)</li>
+                  <li>To-Let boards: 30 days (auto-expire)</li>
                   <li>Listings/Seeker requests: Until withdrawn or 180 days</li>
                   <li>Verification tokens: 24 hours</li>
                   <li>Abuse fingerprints: 30 days</li>

@@ -154,9 +154,22 @@ opencode.jsonc
 package.json
 pnpm-lock.yaml
 pnpm-workspace.yaml
+<<<<<<< Updated upstream
 /.agents/skills/svelte-runes/examples
 /.agents/skills/svelte-runes/references
 /.agents
 tasks/map-add-something-plan.md
 /tasks
 /test-results
+=======
+skills-lock.json
+*.json
+/graphify-out
+graphify-out/.graphify_labels.json
+/test-results/core-flows-Core-User-Flows-0e248-er-with-minBudget-maxBudget-chromium-retry1
+/test-results
+/tasks
+/graphify-out
+/graphify-out/cache
+/graphify-out
+>>>>>>> Stashed changes

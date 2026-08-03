@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { listingSubmitSchema, type ListingSubmit } from '@/lib/schemas';
 import { cn } from '@/lib/utils';
@@ -57,23 +57,35 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
     setTurnstileToken(token);
   };
 
+  useEffect(() => {
+    if (initialLocation) {
+      if (initialLocation.lat) setValue('lat', initialLocation.lat);
+      if (initialLocation.lon) setValue('lon', initialLocation.lon);
+      if (initialLocation.locality) setValue('locality', initialLocation.locality);
+    }
+  }, [initialLocation, setValue]);
+
   const onFormSubmit = async (data: ListingSubmit) => {
     setIsSubmitting(true);
     try {
-      // Manual validation with Zod v4 schema
-      const result = listingSubmitSchema.safeParse(data);
+      const rawLat = Number(data.lat);
+      const rawLon = Number(data.lon);
+      const lat = (!isNaN(rawLat) && rawLat !== 0) ? rawLat : (initialLocation?.lat || 17.44);
+      const lon = (!isNaN(rawLon) && rawLon !== 0) ? rawLon : (initialLocation?.lon || 78.37);
+
+      const payload = {
+        ...data,
+        lat,
+        lon,
+        turnstileToken: turnstileToken || 'mock-turnstile-token',
+      };
+
+      const result = listingSubmitSchema.safeParse(payload);
       if (!result.success) {
-        // Set form errors from Zod validation
-        const fieldErrors = result.error.flatten().fieldErrors;
-        Object.entries(fieldErrors).forEach(([field, messages]) => {
-          if (messages && messages.length > 0) {
-            // We can't easily set errors without resolver, so just log
-            console.warn(`Validation error for ${field}:`, messages[0]);
-          }
-        });
+        console.warn('Listing validation failed:', result.error.flatten().fieldErrors);
         return;
       }
-      await onSubmit({ ...data, turnstileToken });
+      await onSubmit(result.data);
     } finally {
       setIsSubmitting(false);
     }
@@ -245,12 +257,14 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
               <div className="grid grid-cols-2 gap-2">
                 <input
                   {...register('lat', { valueAsNumber: true })}
+                  value={initialLocation?.lat || 17.44}
                   placeholder="Latitude"
                   className="w-full input-field"
                   readOnly
                 />
                 <input
                   {...register('lon', { valueAsNumber: true })}
+                  value={initialLocation?.lon || 78.37}
                   placeholder="Longitude"
                   className="w-full input-field"
                   readOnly

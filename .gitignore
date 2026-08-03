@@ -154,3 +154,9 @@ opencode.jsonc
 package.json
 pnpm-lock.yaml
 pnpm-workspace.yaml
+/.agents/skills/svelte-runes/examples
+/.agents/skills/svelte-runes/references
+/.agents
+tasks/map-add-something-plan.md
+/tasks
+/test-results

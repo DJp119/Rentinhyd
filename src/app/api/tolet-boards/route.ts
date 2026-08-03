@@ -2,11 +2,11 @@
 // POST /api/tolet-boards - Submit a To-Let board with photo and phone
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, logAuditEvent } from '@/lib/supabase';
+import { supabase, logAuditEvent, applyPrivacyJitter, getLocalityFromPoint } from '@/lib/supabase';
 import { toLetBoardSubmitSchema, toLetBoardResponseSchema } from '@/lib/schemas';
 import { logger, logError } from '@/lib/observability';
 import { verifyTurnstileToken, encrypt } from '@/lib/security';
-import { applyPrivacyJitter, getLocalityFromPoint, generateRequestFingerprint, checkHyderabadRadius } from '@/lib/utils';
+import { generateRequestFingerprint, checkHyderabadRadius } from '@/lib/utils';
 import { checkAbuseOnSubmit } from '@/lib/moderation';
 
 export async function POST(request: NextRequest) {
@@ -105,11 +105,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Privacy jitter
-    const jittered = applyPrivacyJitter(data.lon, data.lat);
+    const jittered = await applyPrivacyJitter(data.lon, data.lat);
     const jitteredGeom = { lat: jittered[1], lon: jittered[0] };
 
     // Locality
-    const locality = getLocalityFromPoint(data.lon, data.lat) || data.locality;
+    const locality = (await getLocalityFromPoint(data.lon, data.lat)) || data.locality;
 
     // Encrypt phone number
     const encryptedPhoneObj = await encrypt(data.phone);

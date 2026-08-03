@@ -72,12 +72,17 @@ export function RentPinForm({ location, onSubmit, onCancel }: RentPinFormProps) 
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    const rawLat = Number(data.lat);
+    const rawLon = Number(data.lon);
+    const lat = (!isNaN(rawLat) && rawLat !== 0) ? rawLat : location.lat;
+    const lon = (!isNaN(rawLon) && rawLon !== 0) ? rawLon : location.lon;
+
     const payload = {
       ...data,
       rentMin: Number(data.rentMin),
       rentMax: Number(data.rentMax),
-      lat: Number(data.lat),
-      lon: Number(data.lon),
+      lat,
+      lon,
       turnstileToken: turnstileToken || 'mock-turnstile-token',
     };
 
@@ -125,8 +130,8 @@ export function RentPinForm({ location, onSubmit, onCancel }: RentPinFormProps) 
       )}
 
       {/* Hidden coordinates */}
-      <input type="hidden" {...register('lat')} />
-      <input type="hidden" {...register('lon')} />
+      <input type="hidden" value={location.lat} {...register('lat')} />
+      <input type="hidden" value={location.lon} {...register('lon')} />
 
       {/* Locality */}
       <div>

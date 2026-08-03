@@ -14,7 +14,10 @@ const uuidSchema = z.string().uuid({ message: 'Invalid UUID format' });
 const rentSchema = z.number().int().min(1000).max(500000); // ₹1k - ₹5L
 const depositSchema = z.number().int().min(0).max(24);
 
-const localitySchema = z.string().min(2).max(50).regex(/^[a-z0-9-]+$/);
+const localitySchema = z.string().min(2).max(100)
+  .refine(val => /^[a-zA-Z0-9\s-]+$/.test(val), { message: 'Locality must only contain letters, numbers, spaces, and hyphens' })
+  .transform(val => val.toLowerCase().trim().replace(/[\s_-]+/g, '-'))
+  .pipe(z.string().min(2).max(50).regex(/^[a-z0-9-]+$/));
 const bhkSchema = z.enum(['1BHK', '2BHK', '3BHK', '4+BHK', 'room', 'any']);
 const furnishingSchema = z.enum(['unfurnished', 'semi_furnished', 'fully_furnished']);
 const listingTypeSchema = z.enum(['whole_flat', 'room_flatmate']);

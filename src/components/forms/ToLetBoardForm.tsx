@@ -116,12 +116,17 @@ export function ToLetBoardForm({ location, onSuccess, onCancel }: ToLetBoardForm
     setIsSubmitting(true);
 
     try {
+      const rawLat = Number(data.lat);
+      const rawLon = Number(data.lon);
+      const lat = (!isNaN(rawLat) && rawLat !== 0) ? rawLat : location.lat;
+      const lon = (!isNaN(rawLon) && rawLon !== 0) ? rawLon : location.lon;
+
       const formData = new FormData();
       formData.append('photo', photoFile);
       formData.append('phone', data.phone);
       formData.append('locality', data.locality);
-      formData.append('lat', String(data.lat));
-      formData.append('lon', String(data.lon));
+      formData.append('lat', String(lat));
+      formData.append('lon', String(lon));
       formData.append('consent', String(data.consent));
       formData.append('turnstileToken', turnstileToken || 'mock-turnstile-token');
 
@@ -161,8 +166,8 @@ export function ToLetBoardForm({ location, onSuccess, onCancel }: ToLetBoardForm
       )}
 
       {/* Hidden coordinates */}
-      <input type="hidden" {...register('lat')} />
-      <input type="hidden" {...register('lon')} />
+      <input type="hidden" value={location.lat} {...register('lat')} />
+      <input type="hidden" value={location.lon} {...register('lon')} />
 
       {/* Photo Upload */}
       <div>

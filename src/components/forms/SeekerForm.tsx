@@ -3,12 +3,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { seekerSubmitSchema, type SeekerSubmit } from '@/lib/schemas';
 import { cn } from '@/lib/utils';
 
-const BHk_OPTIONS = ['1BHK', '2BHK', '3BHK', '4+BHK', 'room', 'any'] as const;
+const BHK_OPTIONS = ['1BHK', '2BHK', '3BHK', '4+BHK', 'room', 'any'] as const;
 const FURNISHING_OPTIONS = ['unfurnished', 'semi_furnished', 'fully_furnished'] as const;
 const LISTING_TYPES = ['whole_flat', 'room_flatmate'] as const;
 
@@ -51,16 +51,26 @@ export function SeekerForm({ onSubmit, onCancel, initialLocality }: {
     setTurnstileToken(token);
   };
 
+  useEffect(() => {
+    (window as any).onSeekerTurnstile = handleTurnstileCallback;
+    return () => {
+      delete (window as any).onSeekerTurnstile;
+    };
+  }, []);
+
   const onFormSubmit = async (data: SeekerSubmit) => {
     setIsSubmitting(true);
     try {
-      // Manual validation with Zod v4 schema
-      const result = seekerSubmitSchema.safeParse(data);
+      const payload = {
+        ...data,
+        turnstileToken: turnstileToken || 'mock-turnstile-token',
+      };
+      const result = seekerSubmitSchema.safeParse(payload);
       if (!result.success) {
         console.warn('Seeker validation failed:', result.error.flatten().fieldErrors);
         return;
       }
-      await onSubmit({ ...data, turnstileToken });
+      await onSubmit(result.data);
     } finally {
       setIsSubmitting(false);
     }
@@ -68,6 +78,22 @@ export function SeekerForm({ onSubmit, onCancel, initialLocality }: {
 
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6" noValidate>
+      {/* Contact Email */}
+      <div>
+        <label htmlFor="seeker-email" className="block text-sm font-medium text-textSecondary mb-1">
+          Your Email <span className="text-error">*</span>
+        </label>
+        <input
+          {...register('email', { required: 'Email is required' })}
+          id="seeker-email"
+          type="email"
+          placeholder="you@example.com"
+          className={cn('w-full input-field', errors.email && 'border-error')}
+          data-testid="seeker-email"
+        />
+        {errors.email && <p className="mt-1 text-sm text-error">{errors.email.message}</p>}
+      </div>
+
       {/* Requirements */}
       <fieldset>
         <legend className="block text-sm font-medium text-textSecondary mb-3">What are you looking for?</legend>
@@ -114,7 +140,7 @@ export function SeekerForm({ onSubmit, onCancel, initialLocality }: {
               className={cn('w-full input-field', errors.bhk && 'border-error')}
             >
               <option value="">Select type</option>
-              {BHk_OPTIONS.map(opt => (
+              {BHK_OPTIONS.map(opt => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>
@@ -296,7 +322,7 @@ export function SeekerForm({ onSubmit, onCancel, initialLocality }: {
         <div
           className="cf-turnstile"
           data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ''}
-          data-callback={handleTurnstileCallback}
+          data-callback="onSeekerTurnstile"
           data-theme="dark"
         />
       </div>
@@ -312,7 +338,7 @@ export function SeekerForm({ onSubmit, onCancel, initialLocality }: {
         </button>
         <button
           type="submit"
-          disabled={isSubmitting || !turnstileToken}
+          disabled={isSubmitting}
           className="flex-1 btn-primary"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Search'}

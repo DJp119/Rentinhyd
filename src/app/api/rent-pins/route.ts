@@ -103,20 +103,29 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      requestLogger.error('rent_pins.insert_failed', { error: error.message });
+      requestLogger.error('rent_pins.insert_failed', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       throw error;
     }
 
-    // Audit log
-    await logAuditEvent({
-      event_type: 'rent_pin_created',
-      actor_type: 'user',
-      target_type: 'rent_pin',
-      target_id: pin.id,
-      payload: { locality, rent_min: data.rentMin, rent_max: data.rentMax, bhk: data.bhk },
-      ip_fingerprint_hash: fingerprints,
-      user_agent: request.headers.get('user-agent') || undefined,
-    });
+    // Audit log (non-fatal)
+    try {
+      await logAuditEvent({
+        event_type: 'rent_pin_created',
+        actor_type: 'user',
+        target_type: 'rent_pin',
+        target_id: pin.id,
+        payload: { locality, rent_min: data.rentMin, rent_max: data.rentMax, bhk: data.bhk },
+        ip_fingerprint_hash: fingerprints,
+        user_agent: request.headers.get('user-agent') || undefined,
+      });
+    } catch (auditError) {
+      requestLogger.warn('rent_pins.audit_log_failed', { error: (auditError as Error).message });
+    }
 
     const response = rentPinResponseSchema.parse({
       id: pin.id,
@@ -130,7 +139,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logError('rent_pins.error', error, { endpoint: '/api/rent-pins', durationMs: Date.now() - startTime });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Unable to save your rent pin right now.' },
       { status: 500 }
     );
   }

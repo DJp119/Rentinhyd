@@ -6,6 +6,7 @@ import tseslintPlugin from "@typescript-eslint/eslint-plugin";
 export default defineConfig([
   globalIgnores([
     ".next/**",
+    ".open-next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

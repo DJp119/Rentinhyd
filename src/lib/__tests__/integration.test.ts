@@ -436,9 +436,9 @@ describe('Integration Tests', () => {
   describe('Duplicate Detection', () => {
     it('detects duplicate rent pins within 24 hours', async () => {
       queueRpcResults(
-        { count: 0, error: null }, // count_recent_submissions_by_fingerprint
-        { count: 0, error: null }, // count_recent_submissions_by_email
-        { data: 25000, error: null }, // get_average_rent_for_locality
+        { data: [{ count: 0 }], error: null }, // count_recent_submissions_by_fingerprint
+        { data: [{ count: 0 }], error: null }, // count_recent_submissions_by_email
+        { data: [{ avg_rent: 25000, median_rent: 24000, sample_size: 10 }], error: null }, // get_average_rent_for_locality
       );
       setupMockChain({
         then: (resolve) => { resolve({ count: 1, error: null }); return Promise.resolve({ count: 1, error: null }); },
@@ -463,9 +463,9 @@ describe('Integration Tests', () => {
 
     it('does not flag non-duplicate content', async () => {
       queueRpcResults(
-        { count: 0, error: null },
-        { count: 0, error: null },
-        { data: 25000, error: null },
+        { data: [{ count: 0 }], error: null },
+        { data: [{ count: 0 }], error: null },
+        { data: [{ avg_rent: 25000, median_rent: 24000, sample_size: 10 }], error: null },
       );
       setupMockChain({
         then: (resolve) => { resolve({ count: 0, error: null }); return Promise.resolve({ count: 0, error: null }); },
@@ -489,9 +489,9 @@ describe('Integration Tests', () => {
 
     it('detects rent outlier for locality', async () => {
       queueRpcResults(
-        { count: 0, error: null },
-        { count: 0, error: null },
-        { data: 25000, error: null },
+        { data: [{ count: 0 }], error: null },
+        { data: [{ count: 0 }], error: null },
+        { data: [{ avg_rent: 25000, median_rent: 24000, sample_size: 10 }], error: null },
       );
       setupMockChain({});
 
@@ -519,9 +519,9 @@ describe('Integration Tests', () => {
   describe('Abuse Detection Scoring', () => {
     it('allows clean submission (score < 50)', async () => {
       queueRpcResults(
-        { count: 1, error: null }, // count_recent_submissions_by_fingerprint
-        { count: 1, error: null }, // count_recent_submissions_by_email
-        { data: 25000, error: null }, // get_average_rent_for_locality
+        { data: [{ count: 1 }], error: null }, // count_recent_submissions_by_fingerprint
+        { data: [{ count: 1 }], error: null }, // count_recent_submissions_by_email
+        { data: [{ avg_rent: 25000, median_rent: 24000, sample_size: 10 }], error: null }, // get_average_rent_for_locality
       );
       setupMockChain({
         then: (resolve) => { resolve({ count: 0, error: null }); return Promise.resolve({ count: 0, error: null }); },
@@ -546,9 +546,9 @@ describe('Integration Tests', () => {
 
     it('blocks when IP rate limited (>5 submissions)', async () => {
       queueRpcResults(
-        { count: 10, error: null },
-        { count: 1, error: null },
-        { data: 25000, error: null },
+        { data: [{ count: 10 }], error: null },
+        { data: [{ count: 1 }], error: null },
+        { data: [{ avg_rent: 25000, median_rent: 24000, sample_size: 10 }], error: null },
       );
       setupMockChain({
         then: (resolve) => { resolve({ count: 0, error: null }); return Promise.resolve({ count: 0, error: null }); },
@@ -573,9 +573,9 @@ describe('Integration Tests', () => {
 
     it('blocks when combined factors exceed threshold', async () => {
       queueRpcResults(
-        { count: 10, error: null },
-        { count: 1, error: null },
-        { data: 25000, error: null },
+        { data: [{ count: 10 }], error: null },
+        { data: [{ count: 1 }], error: null },
+        { data: [{ avg_rent: 25000, median_rent: 24000, sample_size: 10 }], error: null },
       );
       setupMockChain({
         then: (resolve) => { resolve({ count: 1, error: null }); return Promise.resolve({ count: 1, error: null }); },

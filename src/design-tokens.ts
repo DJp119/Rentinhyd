@@ -139,11 +139,18 @@ export const breakpoints = {
 } as const;
 
 export const zIndex = {
+  map: 0,
+  propertyMarker: 10,
+  toLetMarker: 12,
+  userLocation: 20,
+  mapControls: 30,
+  mapNavigation: 40,
+  mapNotification: 50,
+  modalBackdrop: 60,
+  modal: 70,
   dropdown: 100,
   sticky: 200,
   fixed: 300,
-  modalBackdrop: 400,
-  modal: 500,
   popover: 600,
   tooltip: 700,
   toast: 800,

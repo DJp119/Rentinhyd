@@ -8,60 +8,112 @@ import { test, expect } from '@playwright/test';
 
 test.describe.configure({ retries: 2 });
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+
 test.describe('Core User Flows', () => {
-  const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
   test.beforeEach(async ({ page }) => {
     // Clear cookies/storage between tests
     await page.context().clearCookies();
   });
 
+  // Helper to ensure consent is handled without race conditions
+  async function dismissConsent(page: any) {
+    const consentModal = page.locator('[data-testid="consent-modal"]');
+    const consentBtn = page.locator('[data-testid="consent-accept"]');
+    try {
+      await consentModal.waitFor({ state: 'visible', timeout: 2000 });
+      await consentBtn.click();
+      await consentModal.waitFor({ state: 'hidden', timeout: 5000 });
+    } catch {
+      // consent already dismissed
+    }
+  }
+
   // -------------------------------------------
   // 1. Anonymous Contributor - Rent Pin
   // -------------------------------------------
   test.describe('Anonymous Contributor adds Rent Pin', () => {
-    test('can submit a rent pin from map page', async ({ page }) => {
+    test('can submit a rent pin successfully with mocked 201', async ({ page }) => {
+      await page.route('**/api/rent-pins', async (route) => {
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            status: 'pending',
+            message: 'Rent pin submitted for review. It will appear on the map once approved.',
+          }),
+        });
+      });
+
       await page.goto(`${baseURL}/map`);
-
-      // Wait for map to load
       await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 });
-
-      // Accept consent if shown
-      const acceptBtn = page.locator('[data-testid="consent-accept"]');
-      if (await acceptBtn.isVisible()) {
-        await acceptBtn.click();
-      }
+      await dismissConsent(page);
 
       // Open pin submission modal via map tap
-      await page.click('[data-testid="map-container"]', { position: { x: 300, y: 300 } });
-      await page.click('[data-testid="action-rent"]');
+      await page.locator('[data-testid="map-container"]').click({ position: { x: 300, y: 300 } });
+      await page.locator('[data-testid="action-rent"]').click();
 
       // Fill pin form
       await page.fill('[data-testid="pin-locality"]', 'gachibowli');
       await page.fill('[data-testid="pin-rent-min"]', '20000');
       await page.fill('[data-testid="pin-rent-max"]', '30000');
 
-      // Handle Turnstile (in test env, may be bypassed or use test key)
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(500);
 
       // Submit
       await page.click('[data-testid="pin-submit"]');
 
-      // Verify success message
+      // Verify success message appears
       await expect(page.locator('[data-testid="pin-success"]')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('[data-testid="pin-success"]')).toContainText('successfully');
+    });
+
+    test('displays error and keeps modal open when API returns 500', async ({ page }) => {
+      await page.route('**/api/rent-pins', async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: 'Unable to save your rent pin right now.',
+          }),
+        });
+      });
+
+      await page.goto(`${baseURL}/map`);
+      await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 });
+      await dismissConsent(page);
+
+      await page.locator('[data-testid="map-container"]').click({ position: { x: 300, y: 300 } });
+      await page.locator('[data-testid="action-rent"]').click();
+
+      await page.fill('[data-testid="pin-locality"]', 'gachibowli');
+      await page.fill('[data-testid="pin-rent-min"]', '20000');
+      await page.fill('[data-testid="pin-rent-max"]', '30000');
+
+      await page.waitForTimeout(500);
+      await page.click('[data-testid="pin-submit"]');
+
+      // Form displays the server error
+      const errorEl = page.locator('[data-testid="pin-error"]');
+      await expect(errorEl).toBeVisible({ timeout: 5000 });
+      await expect(errorEl).toContainText('Unable to save your rent pin right now.');
+
+      // Success message does NOT appear
+      await expect(page.locator('[data-testid="pin-success"]')).not.toBeVisible();
+
+      // Form remains visible so user can retry
+      await expect(page.locator('[data-testid="rent-pin-form"]')).toBeVisible();
     });
 
     test('rejects invalid rent pin (rentMin > rentMax)', async ({ page }) => {
       await page.goto(`${baseURL}/map`);
       await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 });
+      await dismissConsent(page);
 
-      const acceptBtn = page.locator('[data-testid="consent-accept"]');
-      if (await acceptBtn.isVisible()) {
-        await acceptBtn.click();
-      }
-
-      await page.click('[data-testid="map-container"]', { position: { x: 300, y: 300 } });
-      await page.click('[data-testid="action-rent"]');
+      await page.locator('[data-testid="map-container"]').click({ position: { x: 300, y: 300 } });
+      await page.locator('[data-testid="action-rent"]').click();
 
       await page.fill('[data-testid="pin-locality"]', 'gachibowli');
       await page.fill('[data-testid="pin-rent-min"]', '35000');

@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
         lifestyle_prefs: data.lifestylePrefs,
         status: 'pending',
         expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        ip_fingerprint_hash: fingerprints,
       })
       .select('id')
       .single();

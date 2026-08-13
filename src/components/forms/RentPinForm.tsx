@@ -74,11 +74,13 @@ export function RentPinForm({ location, onSubmit, onCancel }: RentPinFormProps) 
 
     const rawLat = Number(data.lat);
     const rawLon = Number(data.lon);
-    const lat = (!isNaN(rawLat) && rawLat !== 0) ? rawLat : location.lat;
-    const lon = (!isNaN(rawLon) && rawLon !== 0) ? rawLon : location.lon;
+    const lat = (!isNaN(rawLat) && rawLat !== 0) ? rawLat : (location?.lat ?? 17.4435);
+    const lon = (!isNaN(rawLon) && rawLon !== 0) ? rawLon : (location?.lon ?? 78.3772);
 
     const payload = {
       ...data,
+      bhk: data.bhk || watch('bhk') || '2BHK',
+      furnishing: data.furnishing || watch('furnishing') || 'semi_furnished',
       rentMin: Number(data.rentMin),
       rentMax: Number(data.rentMax),
       lat,
@@ -104,9 +106,16 @@ export function RentPinForm({ location, onSubmit, onCancel }: RentPinFormProps) 
     }
   };
 
+  const onFormInvalid = (errors: any) => {
+    const firstErr = Object.values(errors)[0] as { message?: string } | undefined;
+    if (firstErr?.message) {
+      setErrorMsg(firstErr.message);
+    }
+  };
+
   return (
     <form
-      onSubmit={handleSubmit(onFormSubmit)}
+      onSubmit={handleSubmit(onFormSubmit, onFormInvalid)}
       className="space-y-5"
       noValidate
       data-testid="rent-pin-form"

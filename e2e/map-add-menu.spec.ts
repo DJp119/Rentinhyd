@@ -4,14 +4,23 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Map Tap Add Something Here Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to test consent
+  async function dismissConsent(page: any) {
+    const consentModal = page.locator('[data-testid="consent-modal"]');
+    const consentBtn = page.locator('[data-testid="consent-accept"]');
+    try {
+      await consentModal.waitFor({ state: 'visible', timeout: 2000 });
+      await consentBtn.click();
+      await consentModal.waitFor({ state: 'hidden', timeout: 5000 });
+    } catch {
+      // consent modal did not appear or was already dismissed
+    }
+  }
+
+  test('consent modal blocks map actions before acceptance', async ({ page }) => {
     await page.goto('/map');
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-  });
 
-  test('consent modal blocks map actions before acceptance', async ({ page }) => {
     // Modal should be visible
     const modal = page.locator('[data-testid="consent-modal"]');
     await expect(modal).toBeVisible();
@@ -23,11 +32,8 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('empty map click opens MapAddMenu with all four actions', async ({ page }) => {
-    // Accept consent first
-    const acceptBtn = page.locator('[data-testid="consent-accept"]');
-    if (await acceptBtn.isVisible()) {
-      await acceptBtn.click();
-    }
+    await page.goto('/map');
+    await dismissConsent(page);
 
     // Click map container
     const mapContainer = page.locator('[data-testid="map-container"]');
@@ -46,8 +52,8 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('Rent action opens RentPinForm', async ({ page }) => {
-    const acceptBtn = page.locator('[data-testid="consent-accept"]');
-    if (await acceptBtn.isVisible()) await acceptBtn.click();
+    await page.goto('/map');
+    await dismissConsent(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
     await mapContainer.click({ position: { x: 300, y: 300 } });
@@ -62,8 +68,8 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('List action opens ListingForm', async ({ page }) => {
-    const acceptBtn = page.locator('[data-testid="consent-accept"]');
-    if (await acceptBtn.isVisible()) await acceptBtn.click();
+    await page.goto('/map');
+    await dismissConsent(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
     await mapContainer.click({ position: { x: 300, y: 300 } });
@@ -75,8 +81,8 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('Seek action preselects clicked locality', async ({ page }) => {
-    const acceptBtn = page.locator('[data-testid="consent-accept"]');
-    if (await acceptBtn.isVisible()) await acceptBtn.click();
+    await page.goto('/map');
+    await dismissConsent(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
     await mapContainer.click({ position: { x: 300, y: 300 } });
@@ -88,8 +94,8 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('To-Let action opens ToLetBoardForm', async ({ page }) => {
-    const acceptBtn = page.locator('[data-testid="consent-accept"]');
-    if (await acceptBtn.isVisible()) await acceptBtn.click();
+    await page.goto('/map');
+    await dismissConsent(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
     await mapContainer.click({ position: { x: 300, y: 300 } });
@@ -105,8 +111,8 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('closing the popup restores the map', async ({ page }) => {
-    const acceptBtn = page.locator('[data-testid="consent-accept"]');
-    if (await acceptBtn.isVisible()) await acceptBtn.click();
+    await page.goto('/map');
+    await dismissConsent(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
     await mapContainer.click({ position: { x: 300, y: 300 } });

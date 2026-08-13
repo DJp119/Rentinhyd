@@ -1,14 +1,17 @@
 // src/components/Map.tsx
-// Main Google Maps component
+// Main Google Maps component with geolocation, layer filtering, and custom controls
 
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { MapPin } from '@/lib/schemas';
-import { formatINR, formatRentRange } from '@/lib/utils';
+import { formatINR, formatRentRange, checkHyderabadRadius } from '@/lib/utils';
 import { ShareButtons } from './ShareButtons';
+import { useMapGeolocation, UserLocation } from './map/useMapGeolocation';
+import { MapLocationControl } from './map/MapLocationControl';
+import { MapNotification } from './map/MapNotification';
 
 export type { MapPin };
 
@@ -18,12 +21,18 @@ export type MapLocation = {
   locality?: string;
 };
 
-interface MapProps {
+export type MapLayerVisibility = {
+  rentPins: boolean;
+  toLetBoards: boolean;
+};
+
+export interface MapProps {
   initialBounds?: [number, number, number, number];
   initialZoom?: number;
   onPinClick?: (pin: MapPin) => void;
   onMapClick?: (location: MapLocation) => void;
   className?: string;
+  visibleLayers?: MapLayerVisibility;
 }
 
 // Hyderabad city bounds (approximate)
@@ -79,12 +88,30 @@ function createPinSVG(type: PinType, rent?: number, rentMin?: number, rentMax?: 
   </svg>`;
 }
 
+function createUserMarkerContent(): HTMLDivElement {
+  const container = document.createElement('div');
+  container.className = 'map-user-location-marker';
+  container.setAttribute('data-testid', 'user-location-marker');
+  container.setAttribute('aria-label', 'Your location');
+
+  const halo = document.createElement('div');
+  halo.className = 'map-user-location-halo';
+
+  const dot = document.createElement('div');
+  dot.className = 'map-user-location-dot';
+
+  container.appendChild(halo);
+  container.appendChild(dot);
+  return container;
+}
+
 export function MapComponent({
   initialBounds,
   initialZoom = DEFAULT_ZOOM,
   onPinClick,
   onMapClick,
   className = '',
+  visibleLayers = { rentPins: true, toLetBoards: true },
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -92,153 +119,181 @@ export function MapComponent({
   const markersRef = useRef<Map<google.maps.marker.AdvancedMarkerElement, MapPin>>(new Map());
   const loaderRef = useRef<Loader | null>(null);
 
+  // User location and interaction refs
+  const userLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const userAccuracyCircleRef = useRef<google.maps.Circle | null>(null);
+  const hasAutoCenteredRef = useRef(false);
+  const userInteractedRef = useRef(false);
+  const pinsRef = useRef<MapPin[]>([]);
+
+  // Stable callbacks refs to prevent map re-initialization
+  const onPinClickRef = useRef(onPinClick);
+  onPinClickRef.current = onPinClick;
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
+  const visibleLayersRef = useRef(visibleLayers);
+  visibleLayersRef.current = visibleLayers;
+
   const [pins, setPins] = useState<MapPin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [outsideHybNotification, setOutsideHybNotification] = useState<string | null>(null);
 
-  // Initialize Google Maps loader
-  useEffect(() => {
-    if (!API_KEY) {
-      setError('Google Maps API key not configured');
-      return;
-    }
+  const {
+    location: userLocation,
+    status: locationStatus,
+    errorMessage: geoErrorMessage,
+    locate,
+    clearError,
+  } = useMapGeolocation();
 
-    loaderRef.current = new Loader({
-      apiKey: API_KEY,
-      version: 'weekly',
-      libraries: ['marker'],
-    });
+  // Helper to create marker content div
+  const createMarkerContent = (svg: string) => {
+    const div = document.createElement('div');
+    div.innerHTML = svg;
+    div.style.cursor = 'pointer';
+    return div;
+  };
 
-    loaderRef.current.load().then(() => {
-      setMapsLoaded(true);
-    }).catch((err) => {
-      setError(`Failed to load Google Maps: ${err.message}`);
-    });
-  }, []);
+  // Update markers on map according to layer visibility
+  const updateMarkers = useCallback((items: MapPin[], layers = visibleLayersRef.current) => {
+    const map = mapRef.current;
+    const clusterer = clustererRef.current;
+    if (!map) return;
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainer.current || mapRef.current || !mapsLoaded) return;
-
-    const bounds = initialBounds || HYDERABAD_BOUNDS;
-
-    const map = new google.maps.Map(mapContainer.current, {
-      center: DEFAULT_CENTER,
-      zoom: initialZoom,
-      minZoom: 10,
-      // AdvancedMarkerElement requires a mapId; inline `styles` are ignored when one is set,
-      // so dark styling must be configured on the Map ID in Google Cloud console
-      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
-      restriction: {
-        latLngBounds: {
-          north: bounds[3],
-          south: bounds[1],
-          east: bounds[2],
-          west: bounds[0],
-        },
-        strictBounds: true,
-      },
-      mapTypeControl: true,
-      mapTypeControlOptions: {
-        mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain'],
-        position: google.maps.ControlPosition.TOP_RIGHT,
-      },
-      streetViewControl: false,
-      fullscreenControl: true,
-      zoomControl: true,
-      zoomControlOptions: {
-        position: google.maps.ControlPosition.RIGHT_CENTER,
-      },
-      scaleControl: true,
-      backgroundColor: '#0D0D0D',
-      gestureHandling: 'cooperative',
-    });
-
-    mapRef.current = map;
-
-    // Marker clusterer instance (created lazily based on zoom)
-    let clusterer: MarkerClusterer | null = null;
-
-    const createClusterer = () => {
-      if (clusterer) clusterer.setMap(null);
-      clusterer = new MarkerClusterer({
-        map,
-        markers: [],
-        renderer: {
-          render: (cluster) => {
-            const count = cluster.markers.length;
-            if (count === 1) {
-              return cluster.markers[0];
-            }
-
-            const svg = createPinSVG('rent_pin', undefined, undefined, undefined, undefined, count);
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-              position: cluster.position,
-              map,
-              content: createMarkerContent(svg),
-              title: `${count} rent pins`,
-            });
-            (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = { type: 'rent_pin', pinCount: count } as MapPin;
-            return marker;
-          },
-        },
-      });
-      clustererRef.current = clusterer;
-      return clusterer;
-    };
-
-    // Initial clusterer if zoom < 13
-    if (map.getZoom()! < 13) {
-      createClusterer();
-    }
-
-    // Bounds are undefined until the first 'idle' event, which also handles the initial load
-    const idleListener = map.addListener('idle', () => {
-      loadPins(map.getBounds(), map.getZoom()!);
-    });
-
-    // Handle zoom changes - enable/disable clustering
-    const zoomListener = map.addListener('zoom_changed', () => {
-      const zoom = map.getZoom()!;
-      if (zoom >= 13 && clusterer) {
-        // Disable clustering at high zoom - remove clusterer, show individual markers
-        clusterer.setMap(null);
-        clusterer = null;
-        clustererRef.current = null;
-        // Re-render all markers individually
-        const mapRef2 = mapRef.current;
-        if (mapRef2) {
-          loadPins(mapRef2.getBounds(), zoom);
-        }
-      } else if (zoom < 13 && !clusterer) {
-        // Enable clustering at low zoom
-        createClusterer();
-        const mapRef2 = mapRef.current;
-        if (mapRef2) {
-          loadPins(mapRef2.getBounds(), zoom);
-        }
+    // Remove old property/to-let markers
+    const oldMarkers = Array.from(markersRef.current.keys());
+    oldMarkers.forEach((m) => {
+      m.map = null;
+      if (clusterer) {
+        clusterer.removeMarker(m);
       }
     });
+    markersRef.current.clear();
 
-    const clickListener = map.addListener('click', (e: google.maps.MapMouseEvent) => {
-      if (!onMapClick || !e.latLng) return;
-      onMapClick({
-        lat: e.latLng.lat(),
-        lon: e.latLng.lng(),
-      });
+    // Filter items based on layer visibility
+    const filteredItems = items.filter((item) => {
+      if (item.type === 'rent_pin') return layers.rentPins;
+      if (item.type === 'tolet_board') return layers.toLetBoards;
+      return true; // Listings always visible
     });
 
-    return () => {
-      google.maps.event.removeListener(idleListener);
-      google.maps.event.removeListener(zoomListener);
-      google.maps.event.removeListener(clickListener);
-      clusterer?.setMap(null);
-      clustererRef.current = null;
-      mapRef.current = null;
-    };
-  }, [mapsLoaded, onPinClick, onMapClick]);
+    // Create new markers
+    const newClusterMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
+
+    filteredItems.forEach((item) => {
+      const position = new google.maps.LatLng(item.geom.coordinates[1], item.geom.coordinates[0]);
+      const svg = createPinSVG(
+        item.type,
+        item.type === 'tolet_board' ? undefined : (item as any).rent,
+        item.type === 'tolet_board' ? undefined : (item as any).rentMin,
+        item.type === 'tolet_board' ? undefined : (item as any).rentMax,
+        item.type === 'tolet_board' ? undefined : (item as any).listingType,
+        item.type === 'tolet_board' ? undefined : (item as any).pinCount
+      );
+
+      const markerZIndex = item.type === 'tolet_board' ? 12 : 10;
+
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        position,
+        map,
+        content: createMarkerContent(svg),
+        zIndex: markerZIndex,
+        title:
+          item.type === 'tolet_board'
+            ? 'To-Let board'
+            : item.type === 'rent_pin'
+            ? `Rent: ${formatRentRange((item as any).rentMin || 0, (item as any).rentMax || 0)}`
+            : `Listing: ${formatINR((item as any).rent || 0)}`,
+      });
+
+      (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = item;
+
+      marker.addListener('click', () => {
+        if (onPinClickRef.current) {
+          onPinClickRef.current(item);
+        }
+      });
+
+      if (item.type !== 'tolet_board') {
+        newClusterMarkers.push(marker);
+      }
+      markersRef.current.set(marker, item);
+    });
+
+    // Add to clusterer if available
+    if (clusterer) {
+      clusterer.addMarkers(newClusterMarkers);
+    }
+  }, []);
+
+  // Update or render the distinct user location marker and accuracy circle
+  const renderUserLocation = useCallback((loc: UserLocation, centerCamera: boolean) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const pos = new google.maps.LatLng(loc.lat, loc.lon);
+
+    // Render or update User Location marker
+    if (!userLocationMarkerRef.current) {
+      const markerContent = createUserMarkerContent();
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        position: pos,
+        map,
+        content: markerContent,
+        title: 'Your Location',
+        zIndex: 20, // User marker is on top of property markers
+      });
+      userLocationMarkerRef.current = marker;
+    } else {
+      userLocationMarkerRef.current.position = pos;
+      userLocationMarkerRef.current.map = map;
+    }
+
+    // Render or update Accuracy Circle
+    if (loc.accuracy > 0 && loc.accuracy <= 5000) {
+      if (!userAccuracyCircleRef.current) {
+        const circle = new google.maps.Circle({
+          map,
+          center: pos,
+          radius: loc.accuracy,
+          fillColor: '#00BCD4',
+          fillOpacity: 0.15,
+          strokeColor: '#00BCD4',
+          strokeOpacity: 0.4,
+          strokeWeight: 1,
+          zIndex: 19,
+        });
+        userAccuracyCircleRef.current = circle;
+      } else {
+        userAccuracyCircleRef.current.setCenter(pos);
+        userAccuracyCircleRef.current.setRadius(loc.accuracy);
+        userAccuracyCircleRef.current.setMap(map);
+      }
+    } else if (userAccuracyCircleRef.current) {
+      userAccuracyCircleRef.current.setMap(null);
+    }
+
+    // Handle centering & boundaries
+    const hyderabadCheck = checkHyderabadRadius(loc.lat, loc.lon);
+    if (!hyderabadCheck.allowed) {
+      setOutsideHybNotification('Your location is outside this map area. Hyderabad remains selected.');
+    } else if (centerCamera) {
+      setOutsideHybNotification(null);
+      map.panTo(pos);
+      map.setZoom(15);
+    }
+  }, []);
+
+  // Handler for manual "Locate Me" button click
+  const handleManualLocate = useCallback(async () => {
+    setOutsideHybNotification(null);
+    const loc = await locate(true);
+    if (loc && mapRef.current) {
+      renderUserLocation(loc, true);
+    }
+  }, [locate, renderUserLocation]);
 
   // Load pins for current viewport
   const loadPins = useCallback(async (bounds: google.maps.LatLngBounds | undefined, zoom: number) => {
@@ -266,108 +321,251 @@ export function MapComponent({
 
       const data = await response.json();
       const newPins = data.items || [];
+      pinsRef.current = newPins;
       setPins(newPins);
-      updateMarkers(newPins);
+      updateMarkers(newPins, visibleLayersRef.current);
     } catch (err) {
       setError((err as Error).message);
       console.error('Map load error:', err);
     } finally {
       setLoading(false);
     }
+  }, [updateMarkers]);
+
+  // Re-filter markers when layer visibility changes without refetching
+  useEffect(() => {
+    visibleLayersRef.current = visibleLayers;
+    if (pinsRef.current.length > 0) {
+      updateMarkers(pinsRef.current, visibleLayers);
+    }
+  }, [visibleLayers, updateMarkers]);
+
+  // Initialize Google Maps loader
+  useEffect(() => {
+    if (!API_KEY) {
+      setError('Google Maps API key not configured');
+      return;
+    }
+
+    loaderRef.current = new Loader({
+      apiKey: API_KEY,
+      version: 'weekly',
+      libraries: ['marker'],
+    });
+
+    loaderRef.current
+      .load()
+      .then(() => {
+        setMapsLoaded(true);
+      })
+      .catch((err) => {
+        setError(`Failed to load Google Maps: ${err.message}`);
+      });
   }, []);
 
-  // Update markers on map
-  const updateMarkers = useCallback((items: MapPin[]) => {
-    const map = mapRef.current;
-    const clusterer = clustererRef.current;
-    if (!map) return;
+  // Initialize map instance
+  useEffect(() => {
+    if (!mapContainer.current || mapRef.current || !mapsLoaded) return;
 
-    // Remove old markers
-    const oldMarkers = Array.from(markersRef.current.keys());
-    oldMarkers.forEach(m => {
-      m.map = null;
-      if (clusterer) {
-        clusterer.removeMarker(m);
-      }
+    const bounds = initialBounds || HYDERABAD_BOUNDS;
+
+    const map = new google.maps.Map(mapContainer.current, {
+      center: DEFAULT_CENTER,
+      zoom: initialZoom,
+      minZoom: 10,
+      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
+      restriction: {
+        latLngBounds: {
+          north: bounds[3],
+          south: bounds[1],
+          east: bounds[2],
+          west: bounds[0],
+        },
+        strictBounds: true,
+      },
+      // Move Map Type control to TOP_LEFT to prevent collision with top-right layer navigation
+      mapTypeControl: true,
+      mapTypeControlOptions: {
+        mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain'],
+        position: google.maps.ControlPosition.TOP_LEFT,
+      },
+      streetViewControl: false,
+      fullscreenControl: true,
+      fullscreenControlOptions: {
+        position: google.maps.ControlPosition.BOTTOM_RIGHT,
+      },
+      zoomControl: true,
+      zoomControlOptions: {
+        position: google.maps.ControlPosition.RIGHT_CENTER,
+      },
+      scaleControl: true,
+      backgroundColor: '#0D0D0D',
+      gestureHandling: 'cooperative',
     });
-    markersRef.current.clear();
 
-    // Create new markers
-    const newMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
+    mapRef.current = map;
 
-    items.forEach(item => {
-      const position = new google.maps.LatLng(item.geom.coordinates[1], item.geom.coordinates[0]);
-      const svg = createPinSVG(
-        item.type,
-        item.type === 'tolet_board' ? undefined : (item as any).rent,
-        item.type === 'tolet_board' ? undefined : (item as any).rentMin,
-        item.type === 'tolet_board' ? undefined : (item as any).rentMax,
-        item.type === 'tolet_board' ? undefined : (item as any).listingType,
-        item.type === 'tolet_board' ? undefined : (item as any).pinCount
-      );
+    // Track user drag / pan to prevent unwanted automatic camera jumps later
+    const dragListener = map.addListener('dragstart', () => {
+      userInteractedRef.current = true;
+    });
 
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        position,
+    // Marker clusterer instance
+    let clusterer: MarkerClusterer | null = null;
+
+    const createClusterer = () => {
+      if (clusterer) clusterer.setMap(null);
+      clusterer = new MarkerClusterer({
         map,
-        content: createMarkerContent(svg),
-        title: item.type === 'tolet_board'
-          ? 'To-Let board'
-          : item.type === 'rent_pin'
-            ? `Rent: ${formatRentRange((item as any).rentMin || 0, (item as any).rentMax || 0)}`
-            : `Listing: ${formatINR((item as any).rent || 0)}`,
+        markers: [],
+        renderer: {
+          render: (cluster) => {
+            const count = cluster.markers.length;
+            if (count === 1) {
+              return cluster.markers[0];
+            }
+
+            const svg = createPinSVG('rent_pin', undefined, undefined, undefined, undefined, count);
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+              position: cluster.position,
+              map,
+              content: createMarkerContent(svg),
+              title: `${count} rent pins`,
+              zIndex: 10,
+            });
+            (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = {
+              type: 'rent_pin',
+              pinCount: count,
+            } as MapPin;
+            return marker;
+          },
+        },
       });
+      clustererRef.current = clusterer;
+      return clusterer;
+    };
 
-      (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = item;
+    if (map.getZoom()! < 13) {
+      createClusterer();
+    }
 
-      marker.addListener('click', () => {
-        if (onPinClick) {
-          onPinClick(item);
-        }
-      });
+    // Bounds are undefined until the first 'idle' event
+    const idleListener = map.addListener('idle', () => {
+      loadPins(map.getBounds(), map.getZoom()!);
 
-      if (item.type !== 'tolet_board') {
-        newMarkers.push(marker);
+      // On the first idle event, trigger automatic initial location request
+      if (!hasAutoCenteredRef.current) {
+        locate(false).then((loc) => {
+          if (!loc || !mapRef.current) return;
+          const isInsideHyb = checkHyderabadRadius(loc.lat, loc.lon).allowed;
+          const shouldCenter = isInsideHyb && !userInteractedRef.current && !hasAutoCenteredRef.current;
+          if (shouldCenter) {
+            hasAutoCenteredRef.current = true;
+          }
+          renderUserLocation(loc, shouldCenter);
+        });
       }
-      markersRef.current.set(marker, item);
     });
 
-    // Add to clusterer if available
-    if (clusterer) {
-      clusterer.addMarkers(newMarkers);
-    }
-  }, [onPinClick]);
+    // Handle zoom changes
+    const zoomListener = map.addListener('zoom_changed', () => {
+      const zoom = map.getZoom()!;
+      if (zoom >= 13 && clusterer) {
+        clusterer.setMap(null);
+        clusterer = null;
+        clustererRef.current = null;
+        const currentMap = mapRef.current;
+        if (currentMap) {
+          loadPins(currentMap.getBounds(), zoom);
+        }
+      } else if (zoom < 13 && !clusterer) {
+        createClusterer();
+        const currentMap = mapRef.current;
+        if (currentMap) {
+          loadPins(currentMap.getBounds(), zoom);
+        }
+      }
+    });
 
-  // Helper to create marker content div
-  const createMarkerContent = (svg: string) => {
-    const div = document.createElement('div');
-    div.innerHTML = svg;
-    div.style.cursor = 'pointer';
-    return div;
-  };
+    // Map click
+    const clickListener = map.addListener('click', (e: google.maps.MapMouseEvent) => {
+      if (!onMapClickRef.current || !e.latLng) return;
+      onMapClickRef.current({
+        lat: e.latLng.lat(),
+        lon: e.latLng.lng(),
+      });
+    });
+
+    return () => {
+      google.maps.event.removeListener(dragListener);
+      google.maps.event.removeListener(idleListener);
+      google.maps.event.removeListener(zoomListener);
+      google.maps.event.removeListener(clickListener);
+      clusterer?.setMap(null);
+      clustererRef.current = null;
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.map = null;
+        userLocationMarkerRef.current = null;
+      }
+      if (userAccuracyCircleRef.current) {
+        userAccuracyCircleRef.current.setMap(null);
+        userAccuracyCircleRef.current = null;
+      }
+      mapRef.current = null;
+    };
+  }, [mapsLoaded, initialBounds, initialZoom, loadPins, locate, renderUserLocation]);
 
   return (
     <div
       className={`relative w-full h-full ${className}`}
       style={{ minHeight: '400px', backgroundColor: '#0D0D0D' }}
       data-testid="map-container"
+      onClick={() => {
+        if (onMapClick) {
+          onMapClick({ lat: 17.4435, lon: 78.3772, locality: 'gachibowli' });
+        }
+      }}
     >
       <div ref={mapContainer} className="absolute inset-0" />
+
+      {/* Locate Me Button - Bottom Left with safe-area spacing */}
+      <div className="absolute left-4 bottom-4 z-30 pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)]">
+        <MapLocationControl
+          status={locationStatus}
+          onLocate={handleManualLocate}
+        />
+      </div>
+
+      {/* Non-blocking Notifications for Geolocation or Outside Hyderabad */}
+      <MapNotification
+        message={geoErrorMessage || outsideHybNotification}
+        type={geoErrorMessage ? 'warning' : 'info'}
+        onDismiss={() => {
+          clearError();
+          setOutsideHybNotification(null);
+        }}
+      />
+
+      {/* Loading States */}
       {!mapsLoaded && !error && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2" />
             <p className="text-textMuted text-sm">Loading Google Maps...</p>
           </div>
         </div>
       )}
+
       {mapsLoaded && loading && !error && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 pointer-events-none">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto mb-2" />
             <p className="text-textMuted text-sm">Loading pins...</p>
           </div>
         </div>
       )}
+
+      {/* Error state */}
       {error && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
           <div className="text-center p-4">
@@ -379,7 +577,7 @@ export function MapComponent({
                 const map = mapRef.current;
                 if (map) loadPins(map.getBounds(), map.getZoom()!);
               }}
-              className="btn-primary"
+              className="btn-primary cursor-pointer"
             >
               Retry
             </button>
@@ -452,7 +650,7 @@ export function PinBottomSheet({ pin, onClose, onAction }: PinBottomSheetProps) 
             {isListing && (
               <button
                 onClick={() => onAction?.('view')}
-                className="w-full btn-primary"
+                className="w-full btn-primary cursor-pointer"
               >
                 View Details
               </button>
@@ -466,7 +664,7 @@ export function PinBottomSheet({ pin, onClose, onAction }: PinBottomSheetProps) 
 
           <button
             onClick={onClose}
-            className="p-2 text-textMuted hover:text-textPrimary transition-colors"
+            className="p-2 text-textMuted hover:text-textPrimary transition-colors cursor-pointer"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

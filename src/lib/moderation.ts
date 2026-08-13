@@ -428,6 +428,46 @@ interface AbuseCheckResult {
   score: number;
 }
 
+/**
+ * Safely extract count from Supabase RPC result.
+ * RPC results return { data, error } where data is an array of rows.
+ * Table-returning functions provide rows inside data array.
+ */
+function readRpcCount(data: unknown): number {
+  const row = Array.isArray(data) ? data[0] : data;
+
+  if (!row || typeof row !== 'object') {
+    return 0;
+  }
+
+  const count = (row as { count?: unknown }).count;
+  const parsed = Number(count);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Safely extract average rent data from Supabase RPC result.
+ * Returns { avg_rent, median_rent, sample_size } from first row.
+ */
+function readAverageRent(data: unknown): { avg_rent: number; median_rent: number; sample_size: number } {
+  const row = Array.isArray(data) ? data[0] : data;
+
+  if (!row || typeof row !== 'object') {
+    return { avg_rent: 0, median_rent: 0, sample_size: 0 };
+  }
+
+  const avg = Number((row as { avg_rent?: unknown }).avg_rent);
+  const median = Number((row as { median_rent?: unknown }).median_rent);
+  const sample = Number((row as { sample_size?: unknown }).sample_size);
+
+  return {
+    avg_rent: Number.isFinite(avg) ? avg : 0,
+    median_rent: Number.isFinite(median) ? median : 0,
+    sample_size: Number.isFinite(sample) ? sample : 0,
+  };
+}
+
 export async function checkAbuseOnSubmit(params: {
   ipFingerprintHash: string;
   emailHash: string;
@@ -438,27 +478,56 @@ export async function checkAbuseOnSubmit(params: {
   let score = 0;
 
   // 1. Rate limit by IP fingerprint (last hour)
-  const { count: ipSubmissions } = await supabase
+  const { data: fingerprintRows, error: fingerprintError } = await supabase
     .rpc('count_recent_submissions_by_fingerprint', {
       fingerprint: params.ipFingerprintHash,
       hours: 1,
     });
 
-  if (ipSubmissions && ipSubmissions > 5) {
+  if (fingerprintError) {
+    logger.warn('moderation.fingerprint_rpc_error', {
+      function: 'count_recent_submissions_by_fingerprint',
+      code: fingerprintError.code,
+      message: fingerprintError.message,
+      details: fingerprintError.details,
+      hint: fingerprintError.hint,
+    });
+    // Treat failed lookup as zero to not block on degraded abuse check
+  }
+
+  const ipSubmissions = readRpcCount(fingerprintRows);
+
+  if (ipSubmissions > 5) {
     reasons.push('Rate limit exceeded for violations');
     score += 30;
   }
 
   // 2. Rate limit by email (last hour)
-  const { count: emailSubmissions } = await supabase
-    .rpc('count_recent_submissions_by_email', {
-      email_hash: params.emailHash,
-      hours: 1,
-    });
+  // Skip email RPC entirely for empty hashes (anonymous submissions)
+  if (params.emailHash && params.emailHash.trim() !== '') {
+    const { data: emailRows, error: emailError } = await supabase
+      .rpc('count_recent_submissions_by_email', {
+        email_hash: params.emailHash,
+        hours: 1,
+      });
 
-  if (emailSubmissions && emailSubmissions > 3) {
-    reasons.push('Email rate limit exceeded');
-    score += 20;
+    if (emailError) {
+      logger.warn('moderation.email_rpc_error', {
+        function: 'count_recent_submissions_by_email',
+        code: emailError.code,
+        message: emailError.message,
+        details: emailError.details,
+        hint: emailError.hint,
+      });
+      // Treat failed lookup as zero to not block on degraded abuse check
+    }
+
+    const emailSubmissions = readRpcCount(emailRows);
+
+    if (emailSubmissions > 3) {
+      reasons.push('Email rate limit exceeded');
+      score += 20;
+    }
   }
 
   // 3. Duplicate detection
@@ -473,12 +542,25 @@ export async function checkAbuseOnSubmit(params: {
   // 4. Outlier rent range
   if (params.targetType === 'rent_pin' && params.content) {
     const { rent_min, rent_max } = params.content as { rent_min: number; rent_max: number };
-    const { data: avgRent } = await supabase
+    const { data: avgRentRows, error: avgRentError } = await supabase
       .rpc('get_average_rent_for_locality', {
         locality: params.content.locality as string,
       });
 
-    if (avgRent && (rent_min > avgRent * 3 || rent_max < avgRent * 0.3)) {
+    if (avgRentError) {
+      logger.warn('moderation.average_rent_rpc_error', {
+        function: 'get_average_rent_for_locality',
+        code: avgRentError.code,
+        message: avgRentError.message,
+        details: avgRentError.details,
+        hint: avgRentError.hint,
+      });
+      // Treat failed lookup as no outlier check
+    }
+
+    const { avg_rent } = readAverageRent(avgRentRows);
+
+    if (avg_rent > 0 && (rent_min > avg_rent * 3 || rent_max < avg_rent * 0.3)) {
       reasons.push('Rent outlier for locality');
       score += 15;
     }

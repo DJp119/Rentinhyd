@@ -42,7 +42,7 @@ export function MapAddMenu({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-overlay z-40"
+        className="fixed inset-0 bg-overlay z-[60]"
         onClick={onClose}
         aria-hidden="true"
         data-testid="add-menu-backdrop"
@@ -54,7 +54,7 @@ export function MapAddMenu({
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-menu-title"
-        className="fixed bottom-0 left-0 right-0 z-50 md:top-1/2 md:left-1/2 md:bottom-auto md:right-auto md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-md md:w-full bg-backgroundElevated border-t md:border border-border rounded-t-xl md:rounded-xl p-6 shadow-2xl animate-slide-up focus:outline-none"
+        className="fixed bottom-0 left-0 right-0 z-[70] md:top-1/2 md:left-1/2 md:bottom-auto md:right-auto md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-md md:w-full bg-backgroundElevated border-t md:border border-border rounded-t-xl md:rounded-xl p-6 shadow-2xl animate-slide-up focus:outline-none"
         tabIndex={-1}
         data-testid="map-add-menu"
       >

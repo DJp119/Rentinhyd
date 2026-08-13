@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const CONSENT_KEY = 'rentinhyd_consent';
 
@@ -9,20 +9,20 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'privacy' | 'terms'>('privacy');
 
+  const onAcceptRef = useRef(onAccept);
+  onAcceptRef.current = onAccept;
+
   useEffect(() => {
-    console.log('[ConsentModal] useEffect running, checking localStorage');
     setMounted(true);
     if (typeof window !== 'undefined') {
       const consented = localStorage.getItem(CONSENT_KEY);
-      console.log('[ConsentModal] localStorage consent value:', consented);
       if (!consented) {
-        console.log('[ConsentModal] No consent found, setting show=true');
         setShow(true);
       } else {
-        onAccept();
+        onAcceptRef.current();
       }
     }
-  }, [onAccept]);
+  }, []);
 
   console.log('[ConsentModal] render: mounted=', mounted, 'show=', show);
 
@@ -39,7 +39,7 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay animate-fade-in" data-testid="consent-modal">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-overlay animate-fade-in" data-testid="consent-modal">
       <div className="bg-backgroundElevated border border-border rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="p-6 border-b border-border">

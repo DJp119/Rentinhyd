@@ -49,6 +49,8 @@ export function createRentPinLabelContent(pin: TemporaryRentPin): HTMLDivElement
   container.setAttribute('role', 'img');
   container.setAttribute('aria-label', formatRentPinAriaLabel(pin.bhk, pin.rentMin, pin.rentMax));
   container.setAttribute('data-testid', 'temporary-rent-pin');
+  container.setAttribute('data-lat', String(pin.lat));
+  container.setAttribute('data-lon', String(pin.lon));
 
   const layout = pin.bhk?.trim() || '2BHK';
   const rentK = calculateRentK(pin.rentMin, pin.rentMax);

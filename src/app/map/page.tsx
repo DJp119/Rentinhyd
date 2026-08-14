@@ -99,7 +99,10 @@ export default function MapPage() {
   }, []);
 
   const handleRentSubmit = async (data: RentPinSubmit) => {
-    const submittedLocation = mapLocation ?? { lat: data.lat, lon: data.lon };
+    // The form carries the coordinates captured by the Google Maps click.
+    // Use that same payload for the optimistic marker so the marker cannot
+    // drift from the location that was actually submitted.
+    const submittedLocation = { lat: data.lat, lon: data.lon };
     const response = await fetch('/api/rent-pins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

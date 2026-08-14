@@ -142,8 +142,8 @@ export function RentPinForm({ location, onSubmit, onCancel }: RentPinFormProps) 
       )}
 
       {/* Hidden coordinates */}
-      <input type="hidden" value={location.lat} {...register('lat')} />
-      <input type="hidden" value={location.lon} {...register('lon')} />
+      <input type="hidden" value={location.lat} {...register('lat')} data-testid="pin-lat" />
+      <input type="hidden" value={location.lon} {...register('lon')} data-testid="pin-lon" />
 
       {/* Locality */}
       <div>

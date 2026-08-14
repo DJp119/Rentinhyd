@@ -63,6 +63,12 @@ test.describe('Rent Pin Label Marker Flow', () => {
     await page.fill('[data-testid="pin-rent-min"]', '20000');
     await page.fill('[data-testid="pin-rent-max"]', '30000');
 
+    // Capture the exact coordinates that the form received from the map tap.
+    const submittedLat = await page.locator('[data-testid="pin-lat"]').inputValue();
+    const submittedLon = await page.locator('[data-testid="pin-lon"]').inputValue();
+    expect(submittedLat).not.toBe('17.4435');
+    expect(submittedLon).not.toBe('78.3772');
+
     await page.waitForTimeout(500);
 
     // Submit
@@ -78,6 +84,8 @@ test.describe('Rent Pin Label Marker Flow', () => {
     await expect(labelMarker).toContainText('25K');
     await expect(labelMarker).toHaveAttribute('role', 'img');
     await expect(labelMarker).toHaveAttribute('aria-label', /Your submitted 2BHK rent pin.*25 thousand/);
+    await expect(labelMarker).toHaveAttribute('data-lat', submittedLat);
+    await expect(labelMarker).toHaveAttribute('data-lon', submittedLon);
   });
 
   test('failed API submission (500) does not create temporary marker', async ({ page }) => {

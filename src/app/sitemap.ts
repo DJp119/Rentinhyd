@@ -24,8 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const staticRoutes = [
     '',
-    '/flats-for-rent-in-hyderabad',
-    '/flatmates-in-hyderabad',
+    // '/flats-for-rent-in-hyderabad', // Temporarily disabled
+    // '/flatmates-in-hyderabad', // Temporarily disabled
     '/rent-map',
     '/map',
     '/list',

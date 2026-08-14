@@ -71,17 +71,25 @@ test.describe('Map Geolocation & Navigation Controls', () => {
     await expect(toLetBoardsToggle).toHaveAttribute('aria-pressed', 'false');
   });
 
-  test('navigation links point to whole flats and rooms SEO pages', async ({ page }) => {
+  test('map navigation shows layer toggles and excludes disabled SEO page links', async ({ page }) => {
     await prepareMapPage(page);
 
-    const wholeFlatsLink = page.locator('[data-testid="map-navigation"] a[href="/flats-for-rent-in-hyderabad"]');
-    const roomsLink = page.locator('[data-testid="map-navigation"] a[href="/flatmates-in-hyderabad"]');
+    const nav = page.locator('[data-testid="map-navigation"]');
+    await expect(nav).toBeVisible();
 
-    await expect(wholeFlatsLink).toBeVisible();
-    await expect(wholeFlatsLink).toHaveText(/Whole Flats/);
+    const rentPinsToggle = page.locator('[data-testid="rent-pins-toggle"]');
+    const toLetBoardsToggle = page.locator('[data-testid="tolet-boards-toggle"]');
 
-    await expect(roomsLink).toBeVisible();
-    await expect(roomsLink).toHaveText(/Rooms/);
+    await expect(rentPinsToggle).toBeVisible();
+    await expect(toLetBoardsToggle).toBeVisible();
+
+    await expect(
+      page.locator('a[href="/flats-for-rent-in-hyderabad"]')
+    ).toHaveCount(0);
+
+    await expect(
+      page.locator('a[href="/flatmates-in-hyderabad"]')
+    ).toHaveCount(0);
   });
 
   test('manual Locate Me click triggers location request and updates state', async ({ page, context }) => {

@@ -3,7 +3,7 @@
 
 'use client';
 
-import Link from 'next/link';
+// import Link from 'next/link';
 
 export type MapLayerNavigationProps = {
   rentPinsVisible: boolean;
@@ -22,7 +22,7 @@ export function MapLayerNavigation({
 }: MapLayerNavigationProps) {
   return (
     <nav
-      aria-label="Map layers and navigation"
+      aria-label="Map layers"
       data-testid="map-navigation"
       onClick={(e) => e.stopPropagation()}
       className={`map-control-surface inline-flex items-center gap-1.5 p-1.5 rounded-xl text-xs sm:text-sm font-medium max-w-[calc(100vw-2rem)] overflow-x-auto shadow-lg select-none scrollbar-none ${className}`}
@@ -51,7 +51,7 @@ export function MapLayerNavigation({
         <span>Rent Pins</span>
       </button>
 
-      {/* Nav Link: Whole Flats */}
+      {/* Nav Link: Whole Flats (Temporarily disabled)
       <Link
         href="/flats-for-rent-in-hyderabad"
         className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-textSecondary hover:text-textPrimary hover:bg-backgroundHover/60 border border-transparent transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent"
@@ -64,8 +64,9 @@ export function MapLayerNavigation({
         />
         <span>Whole Flats</span>
       </Link>
+      */}
 
-      {/* Nav Link: Rooms */}
+      {/* Nav Link: Rooms (Temporarily disabled)
       <Link
         href="/flatmates-in-hyderabad"
         className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-textSecondary hover:text-textPrimary hover:bg-backgroundHover/60 border border-transparent transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent"
@@ -78,6 +79,7 @@ export function MapLayerNavigation({
         />
         <span>Rooms</span>
       </Link>
+      */}
 
       {/* Layer Toggle: To-Let Boards */}
       <button

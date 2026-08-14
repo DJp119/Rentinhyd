@@ -1,5 +1,5 @@
 // src/app/api/map/route.ts
-// GET /api/map?bbox=&zoom= - Returns approved, privacy-jittered map items
+// GET /api/map?bbox=&zoom= - Returns privacy-jittered map items, including pending and approved rent pins
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         min_lat: minLat,
         max_lon: maxLon,
         max_lat: maxLat,
-        status_filter: 'approved',
+        status_filter: 'approved,pending',
         cluster: shouldCluster,
         zoom_level: zoom,
       });
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(validatedResponse, {
       headers: {
-        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
+        'Cache-Control': 'private, no-store',
         'X-Response-Time': `${Date.now() - startTime}ms`,
       },
     });

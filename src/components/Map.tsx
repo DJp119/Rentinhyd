@@ -35,6 +35,7 @@ export interface MapProps {
   className?: string;
   visibleLayers?: MapLayerVisibility;
   temporaryRentPins?: TemporaryRentPin[];
+  refreshToken?: number;
 }
 
 // Hyderabad city bounds (approximate)
@@ -115,6 +116,7 @@ export function MapComponent({
   className = '',
   visibleLayers = { rentPins: true, toLetBoards: true },
   temporaryRentPins = [],
+  refreshToken = 0,
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -163,7 +165,11 @@ export function MapComponent({
   };
 
   // Render or update temporary submitted rent pin label markers
-  const renderTemporaryRentPins = useCallback((pinsList: TemporaryRentPin[], layers = visibleLayersRef.current) => {
+  const renderTemporaryRentPins = useCallback((
+    pinsList: TemporaryRentPin[],
+    layers = visibleLayersRef.current,
+    existingRentPinIds: ReadonlySet<string> = new Set()
+  ) => {
     const map = mapRef.current;
     if (!map) return;
 
@@ -178,24 +184,26 @@ export function MapComponent({
 
     const newMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
 
-    pinsList.forEach((pin) => {
-      try {
-        const pos = new google.maps.LatLng(pin.lat, pin.lon);
-        const content = createRentPinLabelContent(pin);
+    pinsList
+      .filter((pin) => !existingRentPinIds.has(pin.id))
+      .forEach((pin) => {
+        try {
+          const pos = new google.maps.LatLng(pin.lat, pin.lon);
+          const content = createRentPinLabelContent(pin);
 
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          position: pos,
-          map,
-          content,
-          zIndex: 15,
-          title: `Submitted: ${pin.bhk} (pending review)`,
-        });
+          const marker = new google.maps.marker.AdvancedMarkerElement({
+            position: pos,
+            map,
+            content,
+            zIndex: 15,
+            title: `Submitted: ${pin.bhk} (pending review)`,
+          });
 
-        newMarkers.push(marker);
-      } catch (err) {
-        console.warn('AdvancedMarkerElement could not be instantiated on map:', err);
-      }
-    });
+          newMarkers.push(marker);
+        } catch (err) {
+          console.warn('AdvancedMarkerElement could not be instantiated on map:', err);
+        }
+      });
 
     temporaryMarkersRef.current = newMarkers;
   }, []);
@@ -252,6 +260,12 @@ export function MapComponent({
             : `Listing: ${formatINR((item as any).rent || 0)}`,
       });
 
+      if (item.type === 'rent_pin') {
+        const markerContent = marker.content as HTMLElement;
+        markerContent.setAttribute('data-testid', 'rent-pin-marker');
+        markerContent.setAttribute('data-pin-id', item.id);
+      }
+
       (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = item;
 
       marker.addListener('click', () => {
@@ -271,8 +285,11 @@ export function MapComponent({
       clusterer.addMarkers(newClusterMarkers);
     }
 
-    // Update temporary submitted markers according to layer visibility
-    renderTemporaryRentPins(temporaryRentPinsRef.current, layers);
+    // Hide the optimistic marker once the same database record is visible.
+    const existingRentPinIds = new Set(
+      items.filter((item) => item.type === 'rent_pin').map((item) => item.id)
+    );
+    renderTemporaryRentPins(temporaryRentPinsRef.current, layers, existingRentPinIds);
   }, [renderTemporaryRentPins]);
 
   // Update or render the distinct user location marker and accuracy circle
@@ -353,7 +370,9 @@ export function MapComponent({
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
       const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
-      const response = await fetch(`/api/map?bbox=${bbox}&zoom=${Math.round(zoom)}&type=all`);
+      const response = await fetch(`/api/map?bbox=${bbox}&zoom=${Math.round(zoom)}&type=all`, {
+        cache: 'no-store',
+      });
 
       if (!response.ok) {
         let detail = '';
@@ -378,6 +397,16 @@ export function MapComponent({
       setLoading(false);
     }
   }, [updateMarkers]);
+
+  // Refresh the current viewport after a successful submission.
+  useEffect(() => {
+    if (refreshToken === 0) return;
+
+    const map = mapRef.current;
+    if (!map) return;
+
+    void loadPins(map.getBounds(), map.getZoom() ?? DEFAULT_ZOOM);
+  }, [refreshToken, loadPins]);
 
   // Re-filter markers when layer visibility changes without refetching
   useEffect(() => {
@@ -569,7 +598,10 @@ export function MapComponent({
   // Synchronize temporary rent pin markers when temporaryRentPins prop or visibleLayers changes
   useEffect(() => {
     if (mapsLoaded && mapRef.current) {
-      renderTemporaryRentPins(temporaryRentPins, visibleLayers);
+      const existingRentPinIds = new Set(
+        pinsRef.current.filter((item) => item.type === 'rent_pin').map((item) => item.id)
+      );
+      renderTemporaryRentPins(temporaryRentPins, visibleLayers, existingRentPinIds);
     }
   }, [temporaryRentPins, visibleLayers, mapsLoaded, renderTemporaryRentPins]);
 

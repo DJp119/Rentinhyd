@@ -22,6 +22,7 @@ export default function MapPage() {
   // const [showSeekForm, setShowSeekForm] = useState(false);
   const [, setConsentGiven] = useState(false);
   const [submittedRentPins, setSubmittedRentPins] = useState<TemporaryRentPin[]>([]);
+  const [mapRefreshToken, setMapRefreshToken] = useState(0);
 
   const handleConsentAccept = useCallback(() => {
     setConsentGiven(true);
@@ -128,6 +129,9 @@ export default function MapPage() {
       ]);
     }
 
+    // Ask the map to replace the optimistic marker with the database marker.
+    setMapRefreshToken((value) => value + 1);
+
     setTimeout(() => {
       setShowRentForm(false);
       setMapLocation(null);
@@ -181,6 +185,7 @@ export default function MapPage() {
         <MapComponent
           visibleLayers={layerVisibility}
           temporaryRentPins={submittedRentPins}
+          refreshToken={mapRefreshToken}
           onPinClick={handlePinClick}
           onMapClick={handleMapClick}
           className="w-full h-full"

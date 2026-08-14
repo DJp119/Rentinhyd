@@ -25,8 +25,8 @@ export default function TermsPage() {
               <span className="text-xl font-bold text-textPrimary">hyderabad.rent</span>
             </Link>
             <nav className="hidden md:flex items-center gap-4">
-              <Link href="/flats-for-rent-in-hyderabad" className="text-sm text-textSecondary hover:text-textPrimary">Flats for Rent</Link>
-              <Link href="/flatmates-in-hyderabad" className="text-sm text-textSecondary hover:text-textPrimary">Flatmates</Link>
+              {/* <Link href="/flats-for-rent-in-hyderabad" className="text-sm text-textSecondary hover:text-textPrimary">Flats for Rent</Link> */}
+              {/* <Link href="/flatmates-in-hyderabad" className="text-sm text-textSecondary hover:text-textPrimary">Flatmates</Link> */}
               <Link href="/rent-map" className="text-sm text-textSecondary hover:text-textPrimary">Map</Link>
             </nav>
           </div>

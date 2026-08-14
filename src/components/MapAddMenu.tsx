@@ -11,7 +11,7 @@ type MapAddMenuProps = {
   onClose: () => void;
   onRent: () => void;
   onList: () => void;
-  onSeek: () => void;
+  // onSeek?: () => void; // Temporarily disabled from map popup
   onToLet: () => void;
 };
 
@@ -20,7 +20,7 @@ export function MapAddMenu({
   onClose,
   onRent,
   onList,
-  onSeek,
+  // onSeek, // Temporarily disabled from map popup
   onToLet,
 }: MapAddMenuProps) {
   const modalRef = useRef<HTMLDivElement>(null);
@@ -111,7 +111,7 @@ export function MapAddMenu({
             </span>
           </button>
 
-          {/* Action 3: Seek */}
+          {/* Action 3: Seek (Temporarily disabled from map-location popup)
           <button
             onClick={onSeek}
             className="flex flex-col items-start w-full text-left p-4 rounded-xl border border-border hover:border-accent hover:bg-muted/10 focus:bg-muted/10 focus:border-accent transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
@@ -125,6 +125,7 @@ export function MapAddMenu({
               Drop a seeker pin — matches land in your inbox within minutes
             </span>
           </button>
+          */}
 
           {/* Action 4: To-Let */}
           <button

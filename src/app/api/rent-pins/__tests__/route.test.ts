@@ -114,7 +114,7 @@ vi.mock('@/lib/email', () => ({
 
 // Import after mocks
 const { rentPinSubmitSchema, rentPinResponseSchema } = await import('@/lib/schemas');
-const { POST } = await import('./route');
+const { POST } = await import('../route');
 
 describe('POST /api/rent-pins', () => {
   let requestLoggerError: ReturnType<typeof vi.fn>;

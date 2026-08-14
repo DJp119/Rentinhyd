@@ -142,6 +142,7 @@ export const zIndex = {
   map: 0,
   propertyMarker: 10,
   toLetMarker: 12,
+  submittedRentPin: 15,
   userLocation: 20,
   mapControls: 30,
   mapNavigation: 40,

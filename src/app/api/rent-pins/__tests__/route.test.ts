@@ -292,7 +292,7 @@ describe('POST /api/rent-pins', () => {
       expect(response.status).toBe(201);
       expect(json.id).toBe('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
       expect(json.status).toBe('pending');
-      expect(json.message).toContain('review');
+      expect(json.message).toBe('Rent pin submitted and is now visible on the map.');
     });
 
     it('saves ip_fingerprint_hash on the rent_pins row', async () => {

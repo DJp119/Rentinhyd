@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     const response = rentPinResponseSchema.parse({
       id: pin.id,
       status: pin.status,
-      message: 'Rent pin submitted for review. It will appear on the map once approved.',
+      message: 'Rent pin submitted and is now visible on the map.',
     });
 
     requestLogger.info('rent_pins.created', { pinId: pin.id, durationMs: Date.now() - startTime });

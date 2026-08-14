@@ -174,3 +174,9 @@ graphify-out/.graphify_labels.json
 /graphify-out
 >>>>>>> Stashed changes
 *.sql
+/playwright-report
+/graphify-out
+/playwright-report
+/graphify-out
+graphify-out/graph.html
+graphify-out/graph.json

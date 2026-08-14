@@ -249,6 +249,7 @@ input::placeholder, textarea::placeholder {
   --z-map: 0;
   --z-property-marker: 10;
   --z-tolet-marker: 12;
+  --map-z-submitted-rent-pin: 15;
   --z-user-location: 20;
   --z-map-controls: 30;
   --z-map-navigation: 40;
@@ -319,5 +320,46 @@ input::placeholder, textarea::placeholder {
   100% {
     transform: scale(1.4);
     opacity: 0;
+  }
+}
+
+/* Submitted Rent Pin Label Marker */
+.map-rent-label-marker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 28px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.3);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+
+.map-rent-label-marker-tail {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid #2563eb;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 767px) {
+  .map-rent-label-marker {
+    min-height: 25px;
+    padding: 0.3rem 0.45rem;
+    font-size: 10px;
   }
 }

@@ -12,8 +12,9 @@ import { ShareButtons } from './ShareButtons';
 import { useMapGeolocation, UserLocation } from './map/useMapGeolocation';
 import { MapLocationControl } from './map/MapLocationControl';
 import { MapNotification } from './map/MapNotification';
+import { TemporaryRentPin, createRentPinLabelContent, formatRentPinAriaLabel, calculateRentK } from './map/RentPinLabelMarker';
 
-export type { MapPin };
+export type { MapPin, TemporaryRentPin };
 
 export type MapLocation = {
   lat: number;
@@ -33,6 +34,7 @@ export interface MapProps {
   onMapClick?: (location: MapLocation) => void;
   className?: string;
   visibleLayers?: MapLayerVisibility;
+  temporaryRentPins?: TemporaryRentPin[];
 }
 
 // Hyderabad city bounds (approximate)
@@ -112,11 +114,15 @@ export function MapComponent({
   onMapClick,
   className = '',
   visibleLayers = { rentPins: true, toLetBoards: true },
+  temporaryRentPins = [],
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const markersRef = useRef<Map<google.maps.marker.AdvancedMarkerElement, MapPin>>(new Map());
+  const temporaryMarkersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const temporaryRentPinsRef = useRef<TemporaryRentPin[]>(temporaryRentPins);
+  temporaryRentPinsRef.current = temporaryRentPins;
   const loaderRef = useRef<Loader | null>(null);
 
   // User location and interaction refs
@@ -155,6 +161,44 @@ export function MapComponent({
     div.style.cursor = 'pointer';
     return div;
   };
+
+  // Render or update temporary submitted rent pin label markers
+  const renderTemporaryRentPins = useCallback((pinsList: TemporaryRentPin[], layers = visibleLayersRef.current) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Remove previous temporary markers
+    temporaryMarkersRef.current.forEach((marker) => {
+      marker.map = null;
+    });
+    temporaryMarkersRef.current = [];
+
+    // Only render if rentPins layer is active
+    if (!layers.rentPins || !pinsList || pinsList.length === 0) return;
+
+    const newMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
+
+    pinsList.forEach((pin) => {
+      try {
+        const pos = new google.maps.LatLng(pin.lat, pin.lon);
+        const content = createRentPinLabelContent(pin);
+
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          position: pos,
+          map,
+          content,
+          zIndex: 15,
+          title: `Submitted: ${pin.bhk} (pending review)`,
+        });
+
+        newMarkers.push(marker);
+      } catch (err) {
+        console.warn('AdvancedMarkerElement could not be instantiated on map:', err);
+      }
+    });
+
+    temporaryMarkersRef.current = newMarkers;
+  }, []);
 
   // Update markers on map according to layer visibility
   const updateMarkers = useCallback((items: MapPin[], layers = visibleLayersRef.current) => {
@@ -226,7 +270,10 @@ export function MapComponent({
     if (clusterer) {
       clusterer.addMarkers(newClusterMarkers);
     }
-  }, []);
+
+    // Update temporary submitted markers according to layer visibility
+    renderTemporaryRentPins(temporaryRentPinsRef.current, layers);
+  }, [renderTemporaryRentPins]);
 
   // Update or render the distinct user location marker and accuracy circle
   const renderUserLocation = useCallback((loc: UserLocation, centerCamera: boolean) => {
@@ -511,9 +558,20 @@ export function MapComponent({
         userAccuracyCircleRef.current.setMap(null);
         userAccuracyCircleRef.current = null;
       }
+      temporaryMarkersRef.current.forEach((marker) => {
+        marker.map = null;
+      });
+      temporaryMarkersRef.current = [];
       mapRef.current = null;
     };
   }, [mapsLoaded, initialBounds, initialZoom, loadPins, locate, renderUserLocation]);
+
+  // Synchronize temporary rent pin markers when temporaryRentPins prop or visibleLayers changes
+  useEffect(() => {
+    if (mapsLoaded && mapRef.current) {
+      renderTemporaryRentPins(temporaryRentPins, visibleLayers);
+    }
+  }, [temporaryRentPins, visibleLayers, mapsLoaded, renderTemporaryRentPins]);
 
   return (
     <div
@@ -527,6 +585,32 @@ export function MapComponent({
       }}
     >
       <div ref={mapContainer} className="absolute inset-0" />
+
+      {/* Submitted Rent Pin Label Markers */}
+      {visibleLayers.rentPins &&
+        temporaryRentPins.map((pin) => (
+          <div
+            key={pin.id}
+            className="absolute pointer-events-none"
+            style={{
+              left: '50%',
+              top: '50%',
+              zIndex: 'var(--map-z-submitted-rent-pin, 15)',
+            }}
+          >
+            <div
+              className="map-rent-label-marker"
+              role="img"
+              aria-label={formatRentPinAriaLabel(pin.bhk, pin.rentMin, pin.rentMax)}
+              data-testid="temporary-rent-pin"
+            >
+              <span>{pin.bhk?.trim() || '2BHK'}</span>
+              <span aria-hidden="true"> · </span>
+              <span>{calculateRentK(pin.rentMin, pin.rentMax)}K</span>
+              <span className="map-rent-label-marker-tail" aria-hidden="true" />
+            </div>
+          </div>
+        ))}
 
       {/* Locate Me Button - Bottom Left with safe-area spacing */}
       <div className="absolute left-4 bottom-4 z-30 pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)]">

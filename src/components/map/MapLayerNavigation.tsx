@@ -24,6 +24,7 @@ export function MapLayerNavigation({
     <nav
       aria-label="Map layers and navigation"
       data-testid="map-navigation"
+      onClick={(e) => e.stopPropagation()}
       className={`map-control-surface inline-flex items-center gap-1.5 p-1.5 rounded-xl text-xs sm:text-sm font-medium max-w-[calc(100vw-2rem)] overflow-x-auto shadow-lg select-none scrollbar-none ${className}`}
       style={{
         zIndex: 'var(--z-map-navigation, 40)',

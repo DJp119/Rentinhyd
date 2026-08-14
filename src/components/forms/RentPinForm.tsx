@@ -115,7 +115,10 @@ export function RentPinForm({ location, onSubmit, onCancel }: RentPinFormProps) 
 
   return (
     <form
-      onSubmit={handleSubmit(onFormSubmit, onFormInvalid)}
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit(onFormSubmit, onFormInvalid)(e);
+      }}
       className="space-y-5"
       noValidate
       data-testid="rent-pin-form"

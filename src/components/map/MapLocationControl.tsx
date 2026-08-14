@@ -22,7 +22,10 @@ export function MapLocationControl({
   return (
     <button
       type="button"
-      onClick={onLocate}
+      onClick={(e) => {
+        e.stopPropagation();
+        onLocate();
+      }}
       aria-label="Locate Me"
       aria-busy={isLoading}
       data-testid="locate-me-button"

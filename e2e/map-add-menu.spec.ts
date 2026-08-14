@@ -31,7 +31,7 @@ test.describe('Map Tap Add Something Here Flow', () => {
     await expect(modal).toBeHidden();
   });
 
-  test('empty map click opens MapAddMenu with all four actions', async ({ page }) => {
+  test('empty map click opens MapAddMenu with three actions', async ({ page }) => {
     await page.goto('/map');
     await dismissConsent(page);
 
@@ -44,11 +44,27 @@ test.describe('Map Tap Add Something Here Flow', () => {
     const addMenu = page.locator('[data-testid="map-add-menu"]');
     await expect(addMenu).toBeVisible();
 
-    // Verify all four action buttons
+    // Verify three active action buttons and absence of seek action
     await expect(page.locator('[data-testid="action-rent"]')).toBeVisible();
     await expect(page.locator('[data-testid="action-list"]')).toBeVisible();
-    await expect(page.locator('[data-testid="action-seek"]')).toBeVisible();
     await expect(page.locator('[data-testid="action-tolet"]')).toBeVisible();
+    await expect(page.locator('[data-testid="action-seek"]')).toHaveCount(0);
+  });
+
+  test('map popup contains exactly three action buttons', async ({ page }) => {
+    await page.goto('/map');
+    await dismissConsent(page);
+
+    const mapContainer = page.locator('[data-testid="map-container"]');
+    await expect(mapContainer).toBeVisible();
+    await mapContainer.click({ position: { x: 300, y: 300 } });
+
+    const addMenu = page.locator('[data-testid="map-add-menu"]');
+    await expect(addMenu).toBeVisible();
+
+    const actionButtons = page.locator('[data-testid^="action-"]');
+    await expect(actionButtons).toHaveCount(3);
+    await expect(page.locator('[data-testid="action-seek"]')).toHaveCount(0);
   });
 
   test('Rent action opens RentPinForm', async ({ page }) => {
@@ -80,6 +96,7 @@ test.describe('Map Tap Add Something Here Flow', () => {
     await expect(page.locator('text=List Your Property')).toBeVisible();
   });
 
+  /*
   test('Seek action preselects clicked locality', async ({ page }) => {
     await page.goto('/map');
     await dismissConsent(page);
@@ -92,6 +109,7 @@ test.describe('Map Tap Add Something Here Flow', () => {
     // Seeker form should open
     await expect(page.locator('text=Find Your Place')).toBeVisible();
   });
+  */
 
   test('To-Let action opens ToLetBoardForm', async ({ page }) => {
     await page.goto('/map');

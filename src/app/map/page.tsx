@@ -4,23 +4,24 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { MapComponent, PinBottomSheet, MapPin, MapLocation, MapLayerVisibility } from '@/components/Map';
+import { MapComponent, PinBottomSheet, MapPin, MapLocation, MapLayerVisibility, TemporaryRentPin } from '@/components/Map';
 import { MapLayerNavigation } from '@/components/map/MapLayerNavigation';
 import { MapAddMenu } from '@/components/MapAddMenu';
 import { ListingForm } from '@/components/forms/ListingForm';
-import { SeekerForm } from '@/components/forms/SeekerForm';
+// import { SeekerForm } from '@/components/forms/SeekerForm';
 import { RentPinForm } from '@/components/forms/RentPinForm';
 import { ToLetBoardForm } from '@/components/forms/ToLetBoardForm';
 import { ToLetBoardSheet } from '@/components/ToLetBoardSheet';
-import { ListingSubmit, SeekerSubmit, RentPinSubmit } from '@/lib/schemas';
+import { ListingSubmit, /* SeekerSubmit, */ RentPinSubmit } from '@/lib/schemas';
 import { ConsentModal } from '@/components/ConsentModal';
 
 export default function MapPage() {
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
   const [selectedToLetId, setSelectedToLetId] = useState<string | null>(null);
   const [showListForm, setShowListForm] = useState(false);
-  const [showSeekForm, setShowSeekForm] = useState(false);
+  // const [showSeekForm, setShowSeekForm] = useState(false);
   const [, setConsentGiven] = useState(false);
+  const [submittedRentPins, setSubmittedRentPins] = useState<TemporaryRentPin[]>([]);
 
   const handleConsentAccept = useCallback(() => {
     setConsentGiven(true);
@@ -75,10 +76,12 @@ export default function MapPage() {
     setShowListForm(true);
   }, []);
 
+  /*
   const handleAddSeeker = useCallback(() => {
     setShowAddMenu(false);
     setShowSeekForm(true);
   }, []);
+  */
 
   const handleAddToLet = useCallback(() => {
     setShowAddMenu(false);
@@ -96,6 +99,7 @@ export default function MapPage() {
   }, []);
 
   const handleRentSubmit = async (data: RentPinSubmit) => {
+    const submittedLocation = mapLocation ?? { lat: data.lat, lon: data.lon };
     const response = await fetch('/api/rent-pins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,6 +109,20 @@ export default function MapPage() {
 
     if (!response.ok) {
       throw new Error(result.error || 'Failed to submit rent pin');
+    }
+
+    if (result.id) {
+      setSubmittedRentPins((prev) => [
+        ...prev,
+        {
+          id: result.id,
+          lat: submittedLocation.lat,
+          lon: submittedLocation.lon,
+          bhk: data.bhk,
+          rentMin: data.rentMin,
+          rentMax: data.rentMax,
+        },
+      ]);
     }
 
     setTimeout(() => {
@@ -129,6 +147,7 @@ export default function MapPage() {
     }
   };
 
+  /*
   const handleSeekSubmit = async (data: SeekerSubmit) => {
     const response = await fetch('/api/seekers', {
       method: 'POST',
@@ -144,6 +163,7 @@ export default function MapPage() {
       alert(result.error || 'Failed to submit search');
     }
   };
+  */
 
   const handleToLetSuccess = () => {
     setShowToLetForm(false);
@@ -157,6 +177,7 @@ export default function MapPage() {
       <main className="w-full h-full">
         <MapComponent
           visibleLayers={layerVisibility}
+          temporaryRentPins={submittedRentPins}
           onPinClick={handlePinClick}
           onMapClick={handleMapClick}
           className="w-full h-full"
@@ -183,7 +204,7 @@ export default function MapPage() {
           onClose={handleCloseAddMenu}
           onRent={handleAddRent}
           onList={handleAddListing}
-          onSeek={handleAddSeeker}
+          /* onSeek={handleAddSeeker} */
           onToLet={handleAddToLet}
         />
       )}
@@ -284,7 +305,7 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Seeker Form Modal */}
+      {/* Seeker Form Modal - Temporarily disabled from map popup
       {showSeekForm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-overlay">
           <div className="bg-backgroundElevated border border-border rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-up">
@@ -309,6 +330,7 @@ export default function MapPage() {
           </div>
         </div>
       )}
+      */}
     </div>
   );
 }

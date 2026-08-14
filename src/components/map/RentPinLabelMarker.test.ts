@@ -65,6 +65,8 @@ describe('RentPinLabelMarker', () => {
       expect(el.className).toBe('map-rent-label-marker');
       expect(el.getAttribute('role')).toBe('img');
       expect(el.getAttribute('data-testid')).toBe('temporary-rent-pin');
+      expect(el.getAttribute('data-lat')).toBe(String(mockPin.lat));
+      expect(el.getAttribute('data-lon')).toBe(String(mockPin.lon));
       expect(el.getAttribute('aria-label')).toContain('Your submitted 2BHK rent pin');
       expect(el.getAttribute('aria-label')).toContain('25 thousand rupees');
     });

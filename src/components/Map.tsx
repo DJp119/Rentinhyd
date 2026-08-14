@@ -12,7 +12,7 @@ import { ShareButtons } from './ShareButtons';
 import { useMapGeolocation, UserLocation } from './map/useMapGeolocation';
 import { MapLocationControl } from './map/MapLocationControl';
 import { MapNotification } from './map/MapNotification';
-import { TemporaryRentPin, createRentPinLabelContent, formatRentPinAriaLabel, calculateRentK } from './map/RentPinLabelMarker';
+import { TemporaryRentPin, createRentPinLabelContent } from './map/RentPinLabelMarker';
 
 export type { MapPin, TemporaryRentPin };
 
@@ -578,16 +578,12 @@ export function MapComponent({
       className={`relative w-full h-full ${className}`}
       style={{ minHeight: '400px', backgroundColor: '#0D0D0D' }}
       data-testid="map-container"
-      onClick={() => {
-        if (onMapClick) {
-          onMapClick({ lat: 17.4435, lon: 78.3772, locality: 'gachibowli' });
-        }
-      }}
     >
       <div ref={mapContainer} className="absolute inset-0" />
 
-      {/* Submitted Rent Pin Label Markers */}
-      {visibleLayers.rentPins &&
+      {/* Submitted rent pins are rendered only by AdvancedMarkerElement so the label stays anchored to pin.lat/pin.lon. */}
+      {/* Legacy center overlay intentionally disabled; AdvancedMarkerElement above owns positioning.
+      {false &&
         temporaryRentPins.map((pin) => (
           <div
             key={pin.id}
@@ -611,6 +607,7 @@ export function MapComponent({
             </div>
           </div>
         ))}
+      */}
 
       {/* Locate Me Button - Bottom Left with safe-area spacing */}
       <div className="absolute left-4 bottom-4 z-30 pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)]">

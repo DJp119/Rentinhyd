@@ -15,9 +15,18 @@ export async function GET(request: NextRequest) {
   try {
     // Parse and validate query params
     const searchParams = request.nextUrl.searchParams;
+    const zoomParam = searchParams.get('zoom');
+    let parsedZoom: number | undefined;
+    if (zoomParam) {
+      const zVal = parseInt(zoomParam, 10);
+      if (!isNaN(zVal)) {
+        parsedZoom = Math.min(24, Math.max(1, zVal));
+      }
+    }
+
     const rawQuery = {
       bbox: searchParams.get('bbox'),
-      zoom: searchParams.get('zoom') ? parseInt(searchParams.get('zoom')!) : undefined,
+      zoom: parsedZoom,
       type: searchParams.get('type') || 'all',
       minRent: searchParams.get('minRent') ? parseInt(searchParams.get('minRent')!) : undefined,
       maxRent: searchParams.get('maxRent') ? parseInt(searchParams.get('maxRent')!) : undefined,

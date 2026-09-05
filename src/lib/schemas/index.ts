@@ -43,7 +43,7 @@ const pointSchema = z.object({
 export const mapQuerySchema = z.object({
   // Bounding box: minLon,minLat,maxLon,maxLat
   bbox: z.string().regex(/^-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*$/),
-  zoom: z.number().int().min(1).max(20),
+  zoom: z.number().int().min(1).max(24),
   // Optional filters
   type: z.enum(['pins', 'listings', 'all']).default('all'),
   minRent: rentSchema.optional(),

@@ -410,7 +410,8 @@ export function MapComponent({
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
       const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
-      const response = await fetch(`/api/map?bbox=${bbox}&zoom=${Math.round(zoom)}&type=all`, {
+      const requestZoom = Math.min(20, Math.max(1, Math.round(zoom)));
+      const response = await fetch(`/api/map?bbox=${bbox}&zoom=${requestZoom}&type=all`, {
         cache: 'no-store',
       });
 

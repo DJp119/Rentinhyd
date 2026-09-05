@@ -83,6 +83,11 @@ describe('Zod Schema Validation', () => {
       }
     });
 
+    it('validates high zoom levels (e.g. zoom 22 for street/satellite detail)', () => {
+      const result = mapQuerySchema.safeParse({ bbox: '78.3,17.4,78.5,17.6', zoom: 22 });
+      expect(result.success).toBe(true);
+    });
+
     it('requires zoom parameter', () => {
       const result = mapQuerySchema.safeParse({ bbox: '78.3,17.4,78.5,17.6' });
       expect(result.success).toBe(false);

@@ -127,6 +127,37 @@ export async function POST(request: NextRequest) {
       requestLogger.warn('rent_pins.audit_log_failed', { error: (auditError as Error).message });
     }
 
+    // Broadcast realtime event to all connected map clients
+    try {
+      if (typeof supabase.channel === 'function') {
+        const realtimeChannel = supabase.channel('rent_pins_realtime');
+        if (typeof (realtimeChannel as any).httpSend === 'function') {
+          await (realtimeChannel as any).httpSend('new_pin', {
+            id: pin.id,
+            type: 'rent_pin',
+            geom: {
+              type: 'Point',
+              coordinates: [jitteredGeom.lon, jitteredGeom.lat],
+            },
+            lat: jitteredGeom.lat,
+            lon: jitteredGeom.lon,
+            rentMin: data.rentMin,
+            rentMax: data.rentMax,
+            bhk: data.bhk,
+            furnishing: data.furnishing,
+            locality,
+            pinCount: 1,
+          });
+          requestLogger.info('rent_pins.realtime_broadcast_sent', { pinId: pin.id });
+        }
+      }
+    } catch (broadcastErr) {
+      requestLogger.warn('rent_pins.broadcast_failed', {
+        error: (broadcastErr as Error).message,
+        pinId: pin.id,
+      });
+    }
+
     const response = rentPinResponseSchema.parse({
       id: pin.id,
       status: pin.status,

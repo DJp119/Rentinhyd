@@ -133,17 +133,23 @@ export default function MapPage() {
       const supabase = getSupabase();
       if (supabase && typeof supabase.channel === 'function') {
         const channel = supabase.channel('rent_pins_realtime');
-        const payload = {
-          type: 'broadcast' as const,
-          event: 'new_pin',
-          payload: { id: result.id, lat: submittedLocation.lat, lon: submittedLocation.lon },
+        const broadcastData = {
+          id: result.id,
+          lat: submittedLocation.lat,
+          lon: submittedLocation.lon,
+          bhk: data.bhk,
+          rentMin: data.rentMin,
+          rentMax: data.rentMax,
+          locality: data.locality,
         };
         if (channel.state === 'joined') {
-          void channel.send(payload);
+          void channel.send({
+            type: 'broadcast',
+            event: 'new_pin',
+            payload: broadcastData,
+          });
         } else if (typeof (channel as any).httpSend === 'function') {
-          void (channel as any).httpSend(payload);
-        } else {
-          void channel.send(payload);
+          void (channel as any).httpSend('new_pin', broadcastData);
         }
       }
     } catch (e) {

@@ -719,7 +719,11 @@ export function MapComponent({
       const supabase = getSupabase();
       if (supabase && typeof supabase.channel === 'function') {
         channel = supabase
-          .channel('rent_pins_realtime')
+          .channel('rent_pins_realtime', {
+            config: {
+              broadcast: { self: true },
+            },
+          })
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'rent_pins' },
@@ -730,7 +734,38 @@ export function MapComponent({
               }
             }
           )
-          .on('broadcast', { event: 'new_pin' }, () => {
+          .on('broadcast', { event: 'new_pin' }, (rawPayload: any) => {
+            const pinData = rawPayload?.payload;
+            if (
+              pinData &&
+              pinData.id &&
+              typeof pinData.lat === 'number' &&
+              typeof pinData.lon === 'number'
+            ) {
+              const newMapPin: MapPin = {
+                id: pinData.id,
+                type: 'rent_pin',
+                geom: pinData.geom || {
+                  type: 'Point' as const,
+                  coordinates: [pinData.lon, pinData.lat] as [number, number],
+                },
+                rentMin: typeof pinData.rentMin === 'number' ? pinData.rentMin : 20000,
+                rentMax: typeof pinData.rentMax === 'number' ? pinData.rentMax : 25000,
+                bhk: pinData.bhk || '2BHK',
+                furnishing: pinData.furnishing || 'semi_furnished',
+                locality: pinData.locality || 'Hyderabad',
+                pinCount: pinData.pinCount || 1,
+              };
+
+              const currentPins = pinsRef.current;
+              if (!currentPins.some((p) => p.id === newMapPin.id)) {
+                const updated = [newMapPin, ...currentPins];
+                pinsRef.current = updated;
+                setPins(updated);
+                updateMarkers(updated, visibleLayersRef.current);
+              }
+            }
+
             const map = mapRef.current;
             if (map) {
               void loadPins(map.getBounds(), map.getZoom() ?? DEFAULT_ZOOM);
@@ -755,10 +790,19 @@ export function MapComponent({
     return () => {
       if (pollTimer) clearInterval(pollTimer);
       if (channel) {
-        channel.unsubscribe().catch(() => {});
+        try {
+          const client = getSupabase();
+          if (client && typeof client.removeChannel === 'function') {
+            client.removeChannel(channel);
+          } else {
+            channel.unsubscribe().catch(() => {});
+          }
+        } catch {
+          channel.unsubscribe().catch(() => {});
+        }
       }
     };
-  }, [loadPins]);
+  }, [loadPins, updateMarkers]);
 
   // Synchronize temporary rent pin markers when temporaryRentPins prop or visibleLayers changes
   useEffect(() => {

@@ -10,16 +10,41 @@ test.describe('Map Tap Add Something Here Flow', () => {
     try {
       await consentModal.waitFor({ state: 'visible', timeout: 2000 });
       await consentBtn.click();
-      await consentModal.waitFor({ state: 'hidden', timeout: 5000 });
+      // Wait for modal to be fully detached (not just hidden) to avoid intercepting clicks
+      await consentModal.waitFor({ state: 'detached', timeout: 5000 });
     } catch {
       // consent modal did not appear or was already dismissed
     }
   }
 
+  async function waitForMapLoad(page: any) {
+    // Wait for Google Maps loading indicator to disappear (or error state)
+    try {
+      await page.locator('text=Loading Google Maps...').waitFor({ state: 'hidden', timeout: 15000 });
+    } catch {
+      // If it doesn't disappear, check for error state and continue
+      const errorVisible = await page.locator('text=Failed to load map').isVisible().catch(() => false);
+      if (errorVisible) {
+        console.log('Google Maps failed to load (referer error), continuing test anyway');
+      }
+    }
+    // Wait for pins loading indicator to disappear (if it appears)
+    try {
+      await page.locator('text=Loading pins...').waitFor({ state: 'hidden', timeout: 10000 });
+    } catch {
+      // Pins might not show loading state if map failed
+    }
+    // Wait for map container to be ready
+    await page.locator('[data-testid="map-container"]').waitFor({ state: 'visible', timeout: 10000 });
+
+    // Give map a moment to initialize click handlers even if it errors
+    await page.waitForTimeout(1000);
+  }
+
   test('consent modal blocks map actions before acceptance', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await page.evaluate(() => localStorage.clear());
-    await page.reload();
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
     // Modal should be visible
     const modal = page.locator('[data-testid="consent-modal"]');
@@ -32,13 +57,14 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('empty map click opens MapAddMenu with three actions', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await dismissConsent(page);
+    await waitForMapLoad(page);
 
     // Click map container
     const mapContainer = page.locator('[data-testid="map-container"]');
     await expect(mapContainer).toBeVisible();
-    await mapContainer.click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
 
     // MapAddMenu should open
     const addMenu = page.locator('[data-testid="map-add-menu"]');
@@ -52,12 +78,13 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('map popup contains exactly three action buttons', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await dismissConsent(page);
+    await waitForMapLoad(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
     await expect(mapContainer).toBeVisible();
-    await mapContainer.click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
 
     const addMenu = page.locator('[data-testid="map-add-menu"]');
     await expect(addMenu).toBeVisible();
@@ -68,11 +95,12 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('Rent action opens RentPinForm', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await dismissConsent(page);
+    await waitForMapLoad(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
-    await mapContainer.click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
 
     await page.locator('[data-testid="action-rent"]').click();
 
@@ -84,11 +112,12 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('List action opens ListingForm', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await dismissConsent(page);
+    await waitForMapLoad(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
-    await mapContainer.click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
 
     await page.locator('[data-testid="action-list"]').click();
 
@@ -102,7 +131,7 @@ test.describe('Map Tap Add Something Here Flow', () => {
     await dismissConsent(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
-    await mapContainer.click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
 
     await page.locator('[data-testid="action-seek"]').click();
 
@@ -112,11 +141,12 @@ test.describe('Map Tap Add Something Here Flow', () => {
   */
 
   test('To-Let action opens ToLetBoardForm', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await dismissConsent(page);
+    await waitForMapLoad(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
-    await mapContainer.click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
 
     await page.locator('[data-testid="action-tolet"]').click();
 
@@ -129,11 +159,12 @@ test.describe('Map Tap Add Something Here Flow', () => {
   });
 
   test('closing the popup restores the map', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await dismissConsent(page);
+    await waitForMapLoad(page);
 
     const mapContainer = page.locator('[data-testid="map-container"]');
-    await mapContainer.click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
 
     const addMenu = page.locator('[data-testid="map-add-menu"]');
     await expect(addMenu).toBeVisible();

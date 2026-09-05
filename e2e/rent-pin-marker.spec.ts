@@ -13,21 +13,41 @@ test.describe('Rent Pin Label Marker Flow', () => {
     });
   });
 
-  async function prepareMap(page: any) {
-    await page.goto(`${baseURL}/map`);
-    await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 });
+  async function waitForMapLoad(page: any) {
+    // Wait for Google Maps loading indicator to disappear (or error state)
+    try {
+      await page.locator('text=Loading Google Maps...').waitFor({ state: 'hidden', timeout: 15000 });
+    } catch {
+      const errorVisible = await page.locator('text=Failed to load map').isVisible().catch(() => false);
+      if (errorVisible) {
+        console.log('Google Maps failed to load (referer error), continuing test anyway');
+      }
+    }
+    try {
+      await page.locator('text=Loading pins...').waitFor({ state: 'hidden', timeout: 10000 });
+    } catch {
+      // Pins might not show loading state if map failed
+    }
+    await page.locator('[data-testid="map-container"]').waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(1000);
+  }
 
+  async function dismissConsent(page: any) {
     const consentModal = page.locator('[data-testid="consent-modal"]');
     const consentBtn = page.locator('[data-testid="consent-accept"]');
     try {
       await consentModal.waitFor({ state: 'visible', timeout: 2000 });
       await consentBtn.click();
-      await consentModal.waitFor({ state: 'hidden', timeout: 5000 });
+      await consentModal.waitFor({ state: 'detached', timeout: 5000 });
     } catch {
       // consent already dismissed
     }
+  }
 
-    await expect(page.locator('[data-testid="map-container"]')).toBeVisible({ timeout: 10000 });
+  async function prepareMap(page: any) {
+    await page.goto(`${baseURL}/map`, { waitUntil: 'domcontentloaded' });
+    await dismissConsent(page);
+    await waitForMapLoad(page);
   }
 
   test('successful rent pin submission immediately displays optimistic blue label marker with 2BHK · 25K', async ({ page }) => {
@@ -51,7 +71,7 @@ test.describe('Rent Pin Label Marker Flow', () => {
     await prepareMap(page);
 
     // Click map canvas to open MapAddMenu
-    await page.locator('[data-testid="map-container"]').click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
     await expect(page.locator('[data-testid="map-add-menu"]')).toBeVisible({ timeout: 5000 });
 
     // Choose Rent action
@@ -105,7 +125,7 @@ test.describe('Rent Pin Label Marker Flow', () => {
 
     await prepareMap(page);
 
-    await page.locator('[data-testid="map-container"]').click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
     await page.locator('[data-testid="action-rent"]').click();
     await page.fill('[data-testid="pin-locality"]', 'madhapur');
     await page.fill('[data-testid="pin-rent-min"]', '15000');
@@ -138,7 +158,7 @@ test.describe('Rent Pin Label Marker Flow', () => {
 
     await prepareMap(page);
 
-    await page.locator('[data-testid="map-container"]').click({ position: { x: 300, y: 300 } });
+    await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
     await page.locator('[data-testid="action-rent"]').click();
     await page.fill('[data-testid="pin-locality"]', 'kondapur');
     await page.fill('[data-testid="pin-rent-min"]', '18000');

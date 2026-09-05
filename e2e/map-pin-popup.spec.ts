@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Existing Map Marker Click Flow', () => {
   test('clicking an existing marker opens PinBottomSheet', async ({ page }) => {
-    await page.goto('/map');
+    await page.goto('/map', { waitUntil: 'domcontentloaded' });
 
     // Accept consent modal if present
     const acceptBtn = page.locator('[data-testid="consent-accept"]');

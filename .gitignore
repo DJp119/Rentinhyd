@@ -181,3 +181,5 @@ graphify-out/.graphify_labels.json
 graphify-out/graph.html
 graphify-out/graph.json
 /docs
+/.kiro
+/playwright-report

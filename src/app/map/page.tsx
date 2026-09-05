@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { MapComponent, PinBottomSheet, MapPin, MapLocation, MapLayerVisibility, TemporaryRentPin } from '@/components/Map';
+import { MapComponent, MapPin, MapLocation, MapLayerVisibility, TemporaryRentPin } from '@/components/Map';
 import { MapLayerNavigation } from '@/components/map/MapLayerNavigation';
 import { MapAddMenu } from '@/components/MapAddMenu';
 import { ListingForm } from '@/components/forms/ListingForm';
@@ -16,7 +16,6 @@ import { ListingSubmit, /* SeekerSubmit, */ RentPinSubmit } from '@/lib/schemas'
 import { ConsentModal } from '@/components/ConsentModal';
 
 export default function MapPage() {
-  const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
   const [selectedToLetId, setSelectedToLetId] = useState<string | null>(null);
   const [showListForm, setShowListForm] = useState(false);
   // const [showSeekForm, setShowSeekForm] = useState(false);
@@ -42,10 +41,7 @@ export default function MapPage() {
 
   const handleToggleRentPins = useCallback(() => {
     setLayerVisibility((prev) => ({ ...prev, rentPins: !prev.rentPins }));
-    if (selectedPin?.type === 'rent_pin') {
-      setSelectedPin(null);
-    }
-  }, [selectedPin]);
+  }, []);
 
   const handleToggleToLetBoards = useCallback(() => {
     setLayerVisibility((prev) => ({ ...prev, toLetBoards: !prev.toLetBoards }));
@@ -57,8 +53,8 @@ export default function MapPage() {
   const handlePinClick = useCallback((pin: MapPin) => {
     if (pin.type === 'tolet_board') {
       setSelectedToLetId(pin.id);
-    } else {
-      setSelectedPin(pin);
+    } else if (pin.type === 'listing') {
+      window.location.href = `/list/${pin.id}`;
     }
   }, []);
 
@@ -95,7 +91,6 @@ export default function MapPage() {
   }, []);
 
   const handleCloseSheet = useCallback(() => {
-    setSelectedPin(null);
     setSelectedToLetId(null);
   }, []);
 
@@ -264,17 +259,6 @@ export default function MapPage() {
           </div>
         </div>
       )}
-
-      {/* Pin Bottom Sheet (Rent pins / Listings) */}
-      <PinBottomSheet
-        pin={selectedPin}
-        onClose={handleCloseSheet}
-        onAction={(action) => {
-          if (action === 'view') {
-            window.location.href = `/list/${selectedPin?.id}`;
-          }
-        }}
-      />
 
       {/* To-Let Board Detail Sheet */}
       {selectedToLetId && (

@@ -1,13 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { ListingForm } from '@/components/forms/ListingForm';
 import { toast } from 'sonner';
 import type { ListingSubmit } from '@/lib/schemas';
 import Link from 'next/link';
 
 export default function NewListingPage() {
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = async (data: ListingSubmit) => {
+    setFormError(null);
     try {
       const response = await fetch('/api/listings', {
         method: 'POST',
@@ -18,16 +22,21 @@ export default function NewListingPage() {
       const result = await response.json();
 
       if (response.ok) {
+        setVerificationSent(true);
         toast.success('Listing submitted! Check your email to verify.', {
           description: `Verification token: ${result.verificationToken || '(check email)'}`,
           duration: 10000,
         });
       } else {
-        toast.error(result.message || 'Failed to submit listing', {
+        const errorMsg = result.message || result.error || result.details || 'Failed to submit listing';
+        setFormError(errorMsg);
+        toast.error(errorMsg, {
           description: result.error || result.details,
         });
       }
     } catch (err) {
+      const errorMsg = 'Network error - Please try again';
+      setFormError(errorMsg);
       toast.error('Network error', { description: 'Please try again' });
     }
   };
@@ -45,6 +54,20 @@ export default function NewListingPage() {
             List your whole flat or room. Email verification required. No broker fees.
           </p>
         </div>
+
+        {verificationSent && (
+          <div data-testid="listing-verification-sent" className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400">
+            <p className="font-medium">Verification email sent!</p>
+            <p className="text-sm opacity-80">Check your inbox to verify and publish your listing.</p>
+          </div>
+        )}
+
+        {formError && (
+          <div data-testid="listing-error" className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
+            <p className="font-medium">Submission failed</p>
+            <p className="text-sm opacity-80">{formError}</p>
+          </div>
+        )}
 
         <ListingForm
           onSubmit={handleSubmit}

@@ -12,21 +12,41 @@ test.describe('Map Geolocation & Navigation Controls', () => {
   });
 
   // Helper to ensure map is loaded and consent modal is dismissed
-  async function prepareMapPage(page: any) {
-    await page.goto(`${baseURL}/map`);
-    const mapContainer = page.locator('[data-testid="map-container"]');
-    await expect(mapContainer).toBeVisible({ timeout: 15000 });
+  async function waitForMapLoad(page: any) {
+    // Wait for Google Maps loading indicator to disappear (or error state)
+    try {
+      await page.locator('text=Loading Google Maps...').waitFor({ state: 'hidden', timeout: 15000 });
+    } catch {
+      const errorVisible = await page.locator('text=Failed to load map').isVisible().catch(() => false);
+      if (errorVisible) {
+        console.log('Google Maps failed to load (referer error), continuing test anyway');
+      }
+    }
+    try {
+      await page.locator('text=Loading pins...').waitFor({ state: 'hidden', timeout: 10000 });
+    } catch {
+      // Pins might not show loading state if map failed
+    }
+    await page.locator('[data-testid="map-container"]').waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(1000);
+  }
 
+  async function dismissConsent(page: any) {
     const consentModal = page.locator('[data-testid="consent-modal"]');
     const consentBtn = page.locator('[data-testid="consent-accept"]');
-
     try {
       await consentModal.waitFor({ state: 'visible', timeout: 2000 });
       await consentBtn.click();
-      await consentModal.waitFor({ state: 'hidden', timeout: 5000 });
+      await consentModal.waitFor({ state: 'detached', timeout: 5000 });
     } catch {
-      // Consent modal did not appear or was already dismissed
+      // consent already dismissed
     }
+  }
+
+  async function prepareMapPage(page: any) {
+    await page.goto(`${baseURL}/map`, { waitUntil: 'domcontentloaded' });
+    await dismissConsent(page);
+    await waitForMapLoad(page);
   }
 
   test('map loads and displays layer navigation and locate me controls', async ({ page }) => {

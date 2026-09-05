@@ -3,6 +3,43 @@
 
 import { test, expect } from '@playwright/test';
 
+async function dismissConsent(page: any) {
+  const consentModal = page.locator('[data-testid="consent-modal"]');
+  const consentBtn = page.locator('[data-testid="consent-accept"]');
+  try {
+    await consentModal.waitFor({ state: 'visible', timeout: 2000 });
+    await consentBtn.click();
+    // Wait for modal to be fully detached (not just hidden) to avoid intercepting clicks
+    await consentModal.waitFor({ state: 'detached', timeout: 5000 });
+  } catch {
+    // consent modal did not appear or was already dismissed
+  }
+}
+
+async function waitForMapLoad(page: any) {
+  // Wait for Google Maps loading indicator to disappear (or error state)
+  try {
+    await page.locator('text=Loading Google Maps...').waitFor({ state: 'hidden', timeout: 15000 });
+  } catch {
+    // If it doesn't disappear, check for error state and continue
+    const errorVisible = await page.locator('text=Failed to load map').isVisible().catch(() => false);
+    if (errorVisible) {
+      console.log('Google Maps failed to load (referer error), continuing test anyway');
+    }
+  }
+  // Wait for pins loading indicator to disappear (if it appears)
+  try {
+    await page.locator('text=Loading pins...').waitFor({ state: 'hidden', timeout: 10000 });
+  } catch {
+    // Pins might not show loading state if map failed
+  }
+  // Wait for map container to be ready
+  await page.locator('[data-testid="map-container"]').waitFor({ state: 'visible', timeout: 10000 });
+
+  // Give map a moment to initialize click handlers even if it errors
+  await page.waitForTimeout(1000);
+}
+
 test('reload fetches the submitted pending rent pin and avoids duplicate markers', async ({ page }) => {
   const pinId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
   let submitted = false;
@@ -51,15 +88,11 @@ test('reload fetches the submitted pending rent pin and avoids duplicate markers
     });
   });
 
-  await page.goto('http://localhost:3000/map');
-  await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 });
+  await page.goto('/map', { waitUntil: 'domcontentloaded' });
+  await dismissConsent(page);
+  await waitForMapLoad(page);
 
-  const consentModal = page.locator('[data-testid="consent-modal"]');
-  if (await consentModal.isVisible().catch(() => false)) {
-    await page.locator('[data-testid="consent-accept"]').click();
-  }
-
-  await page.locator('[data-testid="map-container"]').click({ position: { x: 300, y: 300 } });
+  await page.locator('[data-testid="map-canvas"]').click({ position: { x: 300, y: 300 } });
   await page.locator('[data-testid="action-rent"]').click();
   await page.fill('[data-testid="pin-locality"]', 'gachibowli');
   await page.fill('[data-testid="pin-rent-min"]', '20000');

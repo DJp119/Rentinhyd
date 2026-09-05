@@ -111,6 +111,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
                 {...register('listingType', { value: type })}
                 type="radio"
                 className="sr-only"
+                data-testid="listing-type"
               />
               <div className="flex flex-col items-center gap-2">
                 <span className="text-lg font-medium text-textPrimary">
@@ -134,6 +135,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
           <input
             {...register('title')}
             id="title"
+            data-testid="listing-title"
             placeholder="e.g., Spacious 2BHK in Gachibowli near Metro"
             className={cn('w-full input-field', errors.title && 'border-error')}
           />
@@ -162,6 +164,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
             <select
               {...register('bhk')}
               id="bhk"
+              data-testid="listing-bhk"
               className={cn('w-full input-field', errors.bhk && 'border-error')}
             >
               <option value="">Select BHK</option>
@@ -179,6 +182,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
             <select
               {...register('furnishing')}
               id="furnishing"
+              data-testid="listing-furnishing"
               className={cn('w-full input-field', errors.furnishing && 'border-error')}
             >
               <option value="">Select furnishing</option>
@@ -196,6 +200,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
             <input
               {...register('rent', { valueAsNumber: true })}
               id="rent"
+              data-testid="listing-rent"
               type="number"
               min="1000"
               max="500000"
@@ -212,6 +217,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
             <input
               {...register('depositMonths', { valueAsNumber: true })}
               id="depositMonths"
+              data-testid="listing-deposit"
               type="number"
               min="0"
               max="24"
@@ -244,6 +250,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
               <input
                 {...register('locality')}
                 id="locality"
+                data-testid="listing-locality"
                 placeholder="e.g., gachibowli"
                 className={cn('w-full input-field', errors.locality && 'border-error')}
               />
@@ -281,6 +288,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
               <input
                 {...register('availableFrom')}
                 id="availableFrom"
+                data-testid="listing-available-from"
                 type="date"
                 min={new Date().toISOString().split('T')[0]}
                 className={cn('w-full input-field', errors.availableFrom && 'border-error')}
@@ -295,6 +303,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
               <input
                 {...register('availableUntil')}
                 id="availableUntil"
+                data-testid="listing-available-until"
                 type="date"
                 min={new Date().toISOString().split('T')[0]}
                 className="w-full input-field"
@@ -315,6 +324,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
                 value={amenity}
                 {...register('amenities')}
                 className="w-4 h-4 accent-accent"
+                data-testid={`amenity-${amenity.toLowerCase().replace(' ', '-')}`}
               />
               <span className="text-sm text-textSecondary">{amenity}</span>
             </label>
@@ -342,6 +352,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
                     type="checkbox"
                     {...register(`lifestylePrefs.${field.key}`)}
                     className="w-4 h-4 accent-accent"
+                    data-testid={`lifestyle-${field.key}`}
                   />
                   <span className="text-sm text-textSecondary">Yes</span>
                 </label>
@@ -349,6 +360,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
                 <select
                   {...register(`lifestylePrefs.${field.key}`)}
                   className="w-full input-field"
+                  data-testid={`lifestyle-${field.key}`}
                 >
                   <option value="no_preference">No preference</option>
                   {field.options.map(opt => (
@@ -372,6 +384,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
             <input
               {...register('contactEmail')}
               id="contactEmail"
+              data-testid="contact-email"
               type="email"
               placeholder="your@email.com"
               className={cn('w-full input-field', errors.contactEmail && 'border-error')}
@@ -386,6 +399,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
             <input
               {...register('contactPhone')}
               id="contactPhone"
+              data-testid="contact-phone"
               type="tel"
               placeholder="+91 98765 43210"
               className={cn('w-full input-field', errors.contactPhone && 'border-error')}
@@ -401,6 +415,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
               <select
                 {...register('contactMethod')}
                 id="contactMethod"
+                data-testid="contact-method"
                 className="w-full input-field"
               >
                 <option value="email">Email</option>
@@ -416,12 +431,14 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
               <div className="grid grid-cols-2 gap-2">
                 <input
                   {...register('contactWindowStart')}
+                  data-testid="contact-window-start"
                   type="time"
                   placeholder="From"
                   className="w-full input-field"
                 />
                 <input
                   {...register('contactWindowEnd')}
+                  data-testid="contact-window-end"
                   type="time"
                   placeholder="To"
                   className="w-full input-field"
@@ -455,6 +472,7 @@ export function ListingForm({ onSubmit, onCancel, initialLocation }: {
           type="submit"
           disabled={isSubmitting || !turnstileToken}
           className="flex-1 btn-primary"
+          data-testid="listing-submit"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Listing'}
         </button>

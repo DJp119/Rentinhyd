@@ -302,7 +302,7 @@ export function MapComponent({
 
       (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = item;
 
-      marker.addListener('click', () => {
+      marker.addListener('gmp-click', () => {
         if (isServerCluster) {
           const currentMap = mapRef.current;
           if (currentMap) {
@@ -579,7 +579,7 @@ export function MapComponent({
               zIndex: 14,
             });
 
-            marker.addListener('click', () => {
+            marker.addListener('gmp-click', () => {
               map.panTo(cluster.position);
               map.setZoom(Math.min((map.getZoom() || 11) + 3, 16));
             });

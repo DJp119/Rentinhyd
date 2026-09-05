@@ -24,8 +24,6 @@ export function ConsentModal({ onAccept }: { onAccept: () => void }) {
     }
   }, []);
 
-  console.log('[ConsentModal] render: mounted=', mounted, 'show=', show);
-
   // Don't render anything before mounted to avoid hydration mismatch
   if (!mounted) return null;
 

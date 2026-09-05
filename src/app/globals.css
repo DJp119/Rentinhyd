@@ -356,10 +356,279 @@ input::placeholder, textarea::placeholder {
   transform: translateX(-50%);
 }
 
+/* =======================================================
+   Area Cluster Marker (Zoomed-out city/area level)
+   Shows "X flats" and Area name in dark rounded card with tail
+   ======================================================= */
+.map-area-cluster-marker {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #141724;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  padding: 6px 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  text-align: center;
+  cursor: pointer;
+  transform: translate(-50%, -100%);
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease;
+  user-select: none;
+  z-index: 10;
+}
+
+.map-area-cluster-marker:hover,
+.map-area-cluster-marker:focus-visible {
+  transform: translate(-50%, -106%) scale(1.07);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.45);
+  z-index: 30;
+}
+
+.map-area-cluster-marker:active {
+  transform: translate(-50%, -98%) scale(0.97);
+}
+
+.map-area-cluster-count {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.15;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+}
+
+.map-area-cluster-locality {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  line-height: 1.15;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.map-area-cluster-tail {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #141724;
+}
+
+/* =======================================================
+   BHK & Rent Marker (Zoomed-in flat level)
+   Shows "2BHK · 33K", "1BHK · 6K" with downward pointer tail
+   ======================================================= */
+.map-bhk-rent-marker {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 27px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 15;
+}
+
+.map-bhk-rent-marker:hover,
+.map-bhk-rent-marker:focus-visible {
+  transform: translate(-50%, -108%) scale(1.09);
+  filter: brightness(1.12);
+  z-index: 35;
+}
+
+.map-bhk-rent-marker:active {
+  transform: translate(-50%, -98%) scale(0.97);
+}
+
+.map-bhk-amber {
+  background: #ea580c; /* Warm vibrant orange */
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.map-bhk-amber-tail {
+  border-top: 6px solid #ea580c;
+}
+
+.map-bhk-blue {
+  background: #2563eb; /* Crisp royal blue */
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.map-bhk-blue-tail {
+  border-top: 6px solid #2563eb;
+}
+
+.map-bhk-content-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.map-bhk-label {
+  font-weight: 800;
+}
+
+.map-bhk-dot {
+  opacity: 0.85;
+  font-size: 11px;
+}
+
+.map-bhk-rent {
+  font-weight: 800;
+}
+
+.map-bhk-marker-tail {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+.map-bhk-badge {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.badge-avail {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.badge-report {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* Sub-cluster badge (e.g. "2 flats", "3 flats") */
+.map-sub-cluster-marker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: #151827;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  user-select: none;
+}
+
+.map-sub-cluster-marker:hover {
+  transform: translate(-50%, -106%) scale(1.08);
+}
+
+.map-sub-cluster-tail {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #151827;
+}
+
+/* To-Let Board Marker */
+.map-tolet-marker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #9333ea;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.map-tolet-marker:hover {
+  transform: translate(-50%, -106%) scale(1.08);
+}
+
+.map-tolet-marker-tail {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #9333ea;
+}
+
 @media (max-width: 767px) {
   .map-rent-label-marker {
     min-height: 25px;
     padding: 0.3rem 0.45rem;
     font-size: 10px;
+  }
+  .map-area-cluster-marker {
+    padding: 5px 11px;
+  }
+  .map-area-cluster-count {
+    font-size: 12px;
+  }
+  .map-area-cluster-locality {
+    font-size: 9.5px;
+  }
+  .map-bhk-rent-marker {
+    min-height: 24px;
+    padding: 3px 8px;
+  }
+  .map-bhk-content-row {
+    font-size: 11px;
   }
 }

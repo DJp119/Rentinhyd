@@ -183,3 +183,7 @@ graphify-out/graph.json
 /docs
 /.kiro
 /playwright-report
+/graphify-out
+graphify-out/graph.json
+/graphify-out
+graphify-out/manifest.json

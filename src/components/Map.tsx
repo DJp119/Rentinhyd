@@ -16,10 +16,12 @@ import { TemporaryRentPin, createRentPinLabelContent } from './map/RentPinLabelM
 import {
   createAreaClusterMarkerContent,
   createBhkRentMarkerContent,
+  createPlacementMarkerContent,
   createSubClusterMarkerContent,
   createToLetMarkerContent,
   formatLocalityName,
 } from './map/MapMarkers';
+import { getSupabase } from '@/lib/supabase';
 
 export type { MapPin, TemporaryRentPin };
 
@@ -43,6 +45,7 @@ export interface MapProps {
   visibleLayers?: MapLayerVisibility;
   temporaryRentPins?: TemporaryRentPin[];
   refreshToken?: number;
+  activeLocation?: MapLocation | null;
 }
 
 // Hyderabad city bounds (approximate)
@@ -124,6 +127,7 @@ export function MapComponent({
   visibleLayers = { rentPins: true, toLetBoards: true },
   temporaryRentPins = [],
   refreshToken = 0,
+  activeLocation = null,
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -133,6 +137,9 @@ export function MapComponent({
   const temporaryRentPinsRef = useRef<TemporaryRentPin[]>(temporaryRentPins);
   temporaryRentPinsRef.current = temporaryRentPins;
   const loaderRef = useRef<Loader | null>(null);
+
+  // Active placement marker ref (rendered while tapping/entering input)
+  const activeLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
   // User location and interaction refs
   const userLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
@@ -661,9 +668,96 @@ export function MapComponent({
         marker.map = null;
       });
       temporaryMarkersRef.current = [];
+      if (activeLocationMarkerRef.current) {
+        activeLocationMarkerRef.current.map = null;
+        activeLocationMarkerRef.current = null;
+      }
       mapRef.current = null;
     };
   }, [mapsLoaded, initialBounds, initialZoom, loadPins, locate, renderUserLocation]);
+
+  // Synchronize active placement marker when entering input or selecting a location
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapsLoaded || !map) return;
+
+    if (activeLocation) {
+      const pos = new google.maps.LatLng(activeLocation.lat, activeLocation.lon);
+      if (!activeLocationMarkerRef.current) {
+        try {
+          const content = createPlacementMarkerContent();
+          const marker = new google.maps.marker.AdvancedMarkerElement({
+            position: pos,
+            map,
+            content,
+            zIndex: 60,
+            title: 'Selected location',
+          });
+          activeLocationMarkerRef.current = marker;
+        } catch (err) {
+          console.warn('Could not render active placement marker:', err);
+        }
+      } else {
+        activeLocationMarkerRef.current.position = pos;
+        activeLocationMarkerRef.current.map = map;
+      }
+    } else {
+      if (activeLocationMarkerRef.current) {
+        activeLocationMarkerRef.current.map = null;
+        activeLocationMarkerRef.current = null;
+      }
+    }
+  }, [activeLocation, mapsLoaded]);
+
+  // Supabase Realtime subscription for live rent pin updates across all users
+  useEffect(() => {
+    let channel: ReturnType<ReturnType<typeof getSupabase>['channel']> | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    try {
+      const supabase = getSupabase();
+      if (supabase && typeof supabase.channel === 'function') {
+        channel = supabase
+          .channel('rent_pins_realtime')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'rent_pins' },
+            () => {
+              const map = mapRef.current;
+              if (map) {
+                void loadPins(map.getBounds(), map.getZoom() ?? DEFAULT_ZOOM);
+              }
+            }
+          )
+          .on('broadcast', { event: 'new_pin' }, () => {
+            const map = mapRef.current;
+            if (map) {
+              void loadPins(map.getBounds(), map.getZoom() ?? DEFAULT_ZOOM);
+            }
+          })
+          .subscribe();
+      }
+    } catch (err) {
+      console.warn('Realtime subscription error, fallback to polling:', err);
+    }
+
+    // 15s background polling fallback when tab is visible
+    pollTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        const map = mapRef.current;
+        if (map) {
+          void loadPins(map.getBounds(), map.getZoom() ?? DEFAULT_ZOOM);
+        }
+      }
+    }, 15000);
+
+    return () => {
+      if (pollTimer) clearInterval(pollTimer);
+      if (channel) {
+        channel.unsubscribe().catch(() => {});
+      }
+    };
+  }, [loadPins]);
 
   // Synchronize temporary rent pin markers when temporaryRentPins prop or visibleLayers changes
   useEffect(() => {

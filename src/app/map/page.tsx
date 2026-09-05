@@ -14,6 +14,7 @@ import { ToLetBoardForm } from '@/components/forms/ToLetBoardForm';
 import { ToLetBoardSheet } from '@/components/ToLetBoardSheet';
 import { ListingSubmit, /* SeekerSubmit, */ RentPinSubmit } from '@/lib/schemas';
 import { ConsentModal } from '@/components/ConsentModal';
+import { getSupabase } from '@/lib/supabase';
 
 export default function MapPage() {
   const [selectedToLetId, setSelectedToLetId] = useState<string | null>(null);
@@ -127,6 +128,21 @@ export default function MapPage() {
     // Ask the map to replace the optimistic marker with the database marker.
     setMapRefreshToken((value) => value + 1);
 
+    // Broadcast realtime event to all active users
+    try {
+      const supabase = getSupabase();
+      if (supabase && typeof supabase.channel === 'function') {
+        const channel = supabase.channel('rent_pins_realtime');
+        channel.send({
+          type: 'broadcast',
+          event: 'new_pin',
+          payload: { id: result.id, lat: submittedLocation.lat, lon: submittedLocation.lon },
+        });
+      }
+    } catch (e) {
+      console.warn('Realtime broadcast notice skipped:', e);
+    }
+
     setTimeout(() => {
       setShowRentForm(false);
       setMapLocation(null);
@@ -181,6 +197,7 @@ export default function MapPage() {
           visibleLayers={layerVisibility}
           temporaryRentPins={submittedRentPins}
           refreshToken={mapRefreshToken}
+          activeLocation={mapLocation}
           onPinClick={handlePinClick}
           onMapClick={handleMapClick}
           className="w-full h-full"

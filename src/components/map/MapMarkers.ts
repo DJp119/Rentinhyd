@@ -252,3 +252,36 @@ export function createToLetMarkerContent(locality?: string): HTMLDivElement {
 
   return container;
 }
+
+/**
+ * Creates the active placement marker DOM element while entering input:
+ * Animated pulsing radar halo + vibrant orange placement pill with pointer tail
+ */
+export function createPlacementMarkerContent(bhk?: string, rentK?: number): HTMLDivElement {
+  const container = document.createElement('div');
+  container.className = 'map-placement-marker-container';
+  container.setAttribute('role', 'img');
+  container.setAttribute('aria-label', 'Selected pin location');
+  container.setAttribute('data-testid', 'active-placement-marker');
+
+  // Pulsing radar ring
+  const pulse = document.createElement('div');
+  pulse.className = 'map-placement-pulse';
+  pulse.setAttribute('aria-hidden', 'true');
+  container.appendChild(pulse);
+
+  // Pin pill
+  const pill = document.createElement('div');
+  pill.className = 'map-placement-pill';
+  pill.textContent = bhk && rentK ? `📍 ${bhk} · ${rentK}K` : '📍 Selected Location';
+  container.appendChild(pill);
+
+  // Downward pointer tail
+  const tail = document.createElement('span');
+  tail.className = 'map-placement-tail';
+  tail.setAttribute('aria-hidden', 'true');
+  container.appendChild(tail);
+
+  return container;
+}
+

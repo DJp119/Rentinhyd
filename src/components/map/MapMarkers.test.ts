@@ -7,6 +7,7 @@ import {
   calculateRentK,
   createAreaClusterMarkerContent,
   createBhkRentMarkerContent,
+  createPlacementMarkerContent,
   createSubClusterMarkerContent,
   createToLetMarkerContent,
 } from './MapMarkers';
@@ -146,6 +147,22 @@ describe('MapMarkers', () => {
       expect(el.className).toBe('map-tolet-marker');
       expect(el.textContent).toContain('TO-LET');
       expect(el.querySelector('.map-tolet-marker-tail')).not.toBeNull();
+    });
+  });
+
+  describe('createPlacementMarkerContent', () => {
+    it('creates placement marker with radar pulse, pill, and tail', () => {
+      const el = createPlacementMarkerContent();
+      expect(el.className).toBe('map-placement-marker-container');
+      expect(el.getAttribute('data-testid')).toBe('active-placement-marker');
+      expect(el.querySelector('.map-placement-pulse')).not.toBeNull();
+      expect(el.querySelector('.map-placement-pill')?.textContent).toBe('📍 Selected Location');
+      expect(el.querySelector('.map-placement-tail')).not.toBeNull();
+    });
+
+    it('creates placement marker with BHK and rent when provided', () => {
+      const el = createPlacementMarkerContent('2BHK', 30);
+      expect(el.querySelector('.map-placement-pill')?.textContent).toBe('📍 2BHK · 30K');
     });
   });
 });

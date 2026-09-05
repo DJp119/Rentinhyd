@@ -8,7 +8,6 @@ import { logger } from '@/lib/observability';
 import { parseBbox, isValidBbox } from '@/lib/utils';
 import { logError } from '@/lib/observability';
 
-
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   const requestLogger = logger.child({ endpoint: '/api/map' });
@@ -51,8 +50,9 @@ export async function GET(request: NextRequest) {
     // Low zoom (<13) = cluster, high zoom = individual pins
     const shouldCluster = zoom < 13;
 
-    // Query rent pins (anonymous)
-    const { data: pins, error: pinsError } = await supabase
+    // Query rent pins (anonymous) - handles both comma-separated and single-status RPC versions
+    let pins: any[] = [];
+    const { data: rawPins, error: pinsError } = await supabase
       .rpc('get_pins_in_bbox', {
         min_lon: minLon,
         min_lat: minLat,
@@ -63,12 +63,35 @@ export async function GET(request: NextRequest) {
         zoom_level: zoom,
       });
 
-    if (pinsError) {
-      requestLogger.error('map.pins_query_failed', { error: pinsError.message, details: pinsError.details });
-      return NextResponse.json(
-        { error: 'Pins query failed' },
-        { status: 500 }
-      );
+    if (!pinsError && rawPins && rawPins.length > 0) {
+      pins = rawPins;
+    } else {
+      // Fallback query for databases expecting single status strings
+      const [approvedRes, pendingRes] = await Promise.all([
+        supabase.rpc('get_pins_in_bbox', {
+          min_lon: minLon,
+          min_lat: minLat,
+          max_lon: maxLon,
+          max_lat: maxLat,
+          status_filter: 'approved',
+          cluster: shouldCluster,
+          zoom_level: zoom,
+        }),
+        supabase.rpc('get_pins_in_bbox', {
+          min_lon: minLon,
+          min_lat: minLat,
+          max_lon: maxLon,
+          max_lat: maxLat,
+          status_filter: 'pending',
+          cluster: shouldCluster,
+          zoom_level: zoom,
+        }),
+      ]);
+
+      const pinMap = new Map<string, any>();
+      (approvedRes.data || []).forEach((p: any) => pinMap.set(p.id, p));
+      (pendingRes.data || []).forEach((p: any) => pinMap.set(p.id, p));
+      pins = Array.from(pinMap.values());
     }
 
     // Query listings (approved only)

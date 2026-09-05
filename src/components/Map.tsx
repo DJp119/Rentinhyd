@@ -13,6 +13,13 @@ import { useMapGeolocation, UserLocation } from './map/useMapGeolocation';
 import { MapLocationControl } from './map/MapLocationControl';
 import { MapNotification } from './map/MapNotification';
 import { TemporaryRentPin, createRentPinLabelContent } from './map/RentPinLabelMarker';
+import {
+  createAreaClusterMarkerContent,
+  createBhkRentMarkerContent,
+  createSubClusterMarkerContent,
+  createToLetMarkerContent,
+  formatLocalityName,
+} from './map/MapMarkers';
 
 export type { MapPin, TemporaryRentPin };
 
@@ -236,40 +243,66 @@ export function MapComponent({
 
     filteredItems.forEach((item) => {
       const position = new google.maps.LatLng(item.geom.coordinates[1], item.geom.coordinates[0]);
-      const svg = createPinSVG(
-        item.type,
-        item.type === 'tolet_board' ? undefined : (item as any).rent,
-        item.type === 'tolet_board' ? undefined : (item as any).rentMin,
-        item.type === 'tolet_board' ? undefined : (item as any).rentMax,
-        item.type === 'tolet_board' ? undefined : (item as any).listingType,
-        item.type === 'tolet_board' ? undefined : (item as any).pinCount
-      );
+      const isServerCluster = Boolean((item as any).pinCount && (item as any).pinCount > 1);
 
-      const markerZIndex = item.type === 'tolet_board' ? 12 : 10;
+      let markerContent: HTMLElement;
+      let markerZIndex = 10;
+      let title = '';
+
+      if (isServerCluster) {
+        markerContent = createAreaClusterMarkerContent({
+          flatCount: (item as any).pinCount,
+          locality: item.locality,
+        });
+        markerZIndex = 14;
+        title = `${(item as any).pinCount} flats in ${formatLocalityName(item.locality)}`;
+      } else if (item.type === 'tolet_board') {
+        markerContent = createToLetMarkerContent(item.locality);
+        markerZIndex = 12;
+        title = `To-Let board in ${formatLocalityName(item.locality)}`;
+      } else {
+        markerContent = createBhkRentMarkerContent({
+          id: item.id,
+          type: item.type,
+          bhk: (item as any).bhk,
+          rent: (item as any).rent,
+          rentMin: (item as any).rentMin,
+          rentMax: (item as any).rentMax,
+          listingType: (item as any).listingType,
+          locality: item.locality,
+          reportCount: (item as any).reportCount,
+        });
+
+        if (item.type === 'rent_pin') {
+          markerContent.setAttribute('data-testid', 'rent-pin-marker');
+          markerContent.setAttribute('data-pin-id', item.id);
+        }
+
+        markerZIndex = 10;
+        const rentStr = (item as any).rent
+          ? formatINR((item as any).rent)
+          : formatRentRange((item as any).rentMin || 0, (item as any).rentMax || 0);
+        title = `${(item as any).bhk || 'Flat'} in ${formatLocalityName(item.locality)}: ${rentStr}`;
+      }
 
       const marker = new google.maps.marker.AdvancedMarkerElement({
         position,
         map,
-        content: createMarkerContent(svg),
+        content: markerContent,
         zIndex: markerZIndex,
-        title:
-          item.type === 'tolet_board'
-            ? 'To-Let board'
-            : item.type === 'rent_pin'
-            ? `Rent: ${formatRentRange((item as any).rentMin || 0, (item as any).rentMax || 0)}`
-            : `Listing: ${formatINR((item as any).rent || 0)}`,
+        title,
       });
-
-      if (item.type === 'rent_pin') {
-        const markerContent = marker.content as HTMLElement;
-        markerContent.setAttribute('data-testid', 'rent-pin-marker');
-        markerContent.setAttribute('data-pin-id', item.id);
-      }
 
       (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = item;
 
       marker.addListener('click', () => {
-        if (onPinClickRef.current) {
+        if (isServerCluster) {
+          const currentMap = mapRef.current;
+          if (currentMap) {
+            currentMap.panTo(position);
+            currentMap.setZoom(Math.min((currentMap.getZoom() || 11) + 3, 16));
+          }
+        } else if (onPinClickRef.current) {
           onPinClickRef.current(item);
         }
       });
@@ -501,18 +534,55 @@ export function MapComponent({
               return cluster.markers[0];
             }
 
-            const svg = createPinSVG('rent_pin', undefined, undefined, undefined, undefined, count);
+            let totalFlats = 0;
+            const localityCounts = new Map<string, number>();
+
+            for (const m of cluster.markers) {
+              const pinData = (m as any).pinData as MapPin | undefined;
+              const flats = (pinData as any)?.pinCount || 1;
+              totalFlats += flats;
+              const loc = pinData?.locality;
+              if (loc) {
+                localityCounts.set(loc, (localityCounts.get(loc) || 0) + flats);
+              }
+            }
+
+            let primaryLocality = '';
+            let maxCount = 0;
+            for (const [loc, c] of localityCounts.entries()) {
+              if (c > maxCount) {
+                maxCount = c;
+                primaryLocality = loc;
+              }
+            }
+
+            const isAreaLevel = (map.getZoom() || 11) < 13 || totalFlats >= 5;
+            const content = isAreaLevel
+              ? createAreaClusterMarkerContent({
+                  flatCount: totalFlats,
+                  locality: primaryLocality,
+                })
+              : createSubClusterMarkerContent(totalFlats, primaryLocality);
+
             const marker = new google.maps.marker.AdvancedMarkerElement({
               position: cluster.position,
               map,
-              content: createMarkerContent(svg),
-              title: `${count} rent pins`,
-              zIndex: 10,
+              content,
+              title: `${totalFlats} flats in ${formatLocalityName(primaryLocality)}`,
+              zIndex: 14,
             });
+
+            marker.addListener('click', () => {
+              map.panTo(cluster.position);
+              map.setZoom(Math.min((map.getZoom() || 11) + 3, 16));
+            });
+
             (marker as google.maps.marker.AdvancedMarkerElement & { pinData: MapPin }).pinData = {
               type: 'rent_pin',
-              pinCount: count,
+              pinCount: totalFlats,
+              locality: primaryLocality,
             } as MapPin;
+
             return marker;
           },
         },

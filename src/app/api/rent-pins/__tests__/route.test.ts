@@ -58,6 +58,9 @@ const mockSupabase = {
     return mockChain;
   }),
   rpc: vi.fn(),
+  channel: vi.fn(() => ({
+    httpSend: vi.fn().mockResolvedValue({ status: 'ok' }),
+  })),
 };
 
 vi.mock('@/lib/supabase', () => ({
@@ -477,6 +480,38 @@ describe('POST /api/rent-pins', () => {
 
       expect(response.status).toBe(400);
       expect(json.error).toContain('from Hyderabad');
+    });
+  });
+
+  describe('Realtime broadcast', () => {
+    it('broadcasts new_pin event via Supabase realtime channel on successful creation', async () => {
+      const mockHttpSend = vi.fn().mockResolvedValue({ status: 'ok' });
+      mockSupabase.channel.mockReturnValueOnce({ httpSend: mockHttpSend } as any);
+
+      const req = createRequest({
+        lat: 17.44,
+        lon: 78.365,
+        rentMin: 20000,
+        rentMax: 30000,
+        bhk: '2BHK',
+        furnishing: 'semi_furnished',
+        locality: 'gachibowli',
+        turnstileToken: 'mock-turnstile-token',
+      });
+      const response = await POST(req);
+      expect(response.status).toBe(201);
+      expect(mockSupabase.channel).toHaveBeenCalledWith('rent_pins_realtime');
+      expect(mockHttpSend).toHaveBeenCalledWith(
+        'new_pin',
+        expect.objectContaining({
+          id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+          type: 'rent_pin',
+          bhk: '2BHK',
+          rentMin: 20000,
+          rentMax: 30000,
+          locality: 'gachibowli',
+        })
+      );
     });
   });
 });

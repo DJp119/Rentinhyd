@@ -9,7 +9,10 @@ import { z } from 'zod';
 // Reusable primitives
 // ============================================
 
-const uuidSchema = z.string().uuid({ message: 'Invalid UUID format' });
+const uuidSchema = z.string().regex(
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+  { message: 'Invalid UUID format' }
+);
 
 const rentSchema = z.number().int().min(1000).max(500000); // ₹1k - ₹5L
 const depositSchema = z.number().int().min(0).max(24);

@@ -21,6 +21,7 @@ export const CSP_DIRECTIVES = {
   'connect-src': [
     "'self'",
     'https://*.supabase.co',
+    'wss://*.supabase.co',
     'https://api.resend.com',
     'https://challenges.cloudflare.com',
     'https://static.cloudflareinsights.com',
